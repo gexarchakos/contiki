@@ -115,7 +115,8 @@ void TSCH_CALLBACK_PACKET_READY(void);
 
 /* called by TSCH every time a neighbor queue has changed */
 #ifdef TSCH_CALLBACK_QUEUE_CHANGED
-void TSCH_CALLBACK_QUEUE_CHANGED(uint8_t, tsch_neighbor*);
+struct tsch_neighbor;
+void TSCH_CALLBACK_QUEUE_CHANGED(uint8_t, struct tsch_neighbor*);
 #endif
 /************ Types ***********/
 
