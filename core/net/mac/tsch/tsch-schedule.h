@@ -72,6 +72,10 @@
 #define TSCH_SCHEDULE_MAX_LINKS 32
 #endif
 
+#ifdef TSCH_CALLBACK_REMOVE_LINK
+  void TSCH_CALLBACK_REMOVE_LINK(struct tsch_link*);
+#endif
+
 /********** Constants *********/
 
 /* Link options */
@@ -143,7 +147,10 @@ int tsch_schedule_remove_slotframe(struct tsch_slotframe *slotframe);
 int tsch_schedule_remove_all_slotframes(void);
 
 /* Returns next slotframe */
-struct tsch_slotframe *tsch_schedule_slotframes_next(struct tsch_slotframe *sf);
+struct tsch_slotframe *tsch_schedule_get_slotframe_next(struct tsch_slotframe *sf);
+/* Returns next link of a slotframe */
+struct tsch_link* tsch_schedule_get_link_next(struct tsch_slotframe* sf, struct tsch_link* lnk);
+
 /* Adds a link to a slotframe, return a pointer to it (NULL if failure) */
 struct tsch_link *tsch_schedule_add_link(struct tsch_slotframe *slotframe,
                                          uint8_t link_options, enum link_type link_type, const linkaddr_t *address,

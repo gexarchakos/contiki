@@ -587,6 +587,11 @@ PT_THREAD(tsch_tx_slot(struct pt *pt, struct rtimer *t))
     current_packet->transmissions++;
     current_packet->ret = mac_tx_status;
 
+#if TSCH_WITH_LINK_STATISTICS
+    current_packet->timeslot = current_link->timeslot;
+    current_packet->slotframe_handle = current_link->slotframe_handle;
+#endif
+
     /* Post TX: Update neighbor state */
     in_queue = update_neighbor_state(current_neighbor, current_packet, current_link, mac_tx_status);
 
@@ -707,6 +712,15 @@ PT_THREAD(tsch_rx_slot(struct pt *pt, struct rtimer *t))
           frame802154_extract_linkaddr(&frame, &source_address, &destination_address);
 
         packet_duration = TSCH_PACKET_DURATION(current_input->len);
+
+#if TSCH_WITH_LINK_STATISTICS
+        radio_value_t radio_last_lqi;
+        NETSTACK_RADIO.get_value(RADIO_PARAM_LAST_LINK_QUALITY, &radio_last_lqi);
+        current_input->lqi = (signed)radio_last_lqi;
+        current_input->slotframe_id = current_link->slotframe_handle;
+        current_input->slotoffset = current_link->timeslot;
+        current_input->channeloffset = current_link->channel_offset;
+#endif
 
 #if TSCH_SECURITY_ENABLED
         /* Decrypt and verify incoming frame */

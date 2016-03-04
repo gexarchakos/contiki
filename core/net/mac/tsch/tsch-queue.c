@@ -137,6 +137,21 @@ tsch_queue_get_time_source(void)
   }
   return NULL;
 }
+
+/* Get next neighbor in the queue */
+struct tsch_neighbor *
+tsch_queue_get_nbr_next(struct tsch_neighbor *previous)
+{
+  if(!tsch_is_locked()) {
+    if(previous) {
+      return previous->next;
+    } else {
+      return list_head(neighbor_list);
+    }
+  }
+  return NULL;
+}
+
 /*---------------------------------------------------------------------------*/
 /* Update TSCH time source */
 int
@@ -246,6 +261,9 @@ tsch_queue_add_packet(const linkaddr_t *addr, mac_callback_t sent, void *ptr)
             /* Add to ringbuf (actual add committed through atomic operation) */
             n->tx_array[put_index] = p;
             ringbufindex_put(&n->tx_ringbuf);
+#ifdef TSCH_CALLBACK_QUEUE_CHANGED
+            TSCH_CALLBACK_QUEUE_CHANGED(TSCH_QUEUE_EVENT_GROW, n);
+#endif
             return p;
           } else {
             memb_free(&packet_memb, p);
@@ -281,6 +299,9 @@ tsch_queue_remove_packet_from_queue(struct tsch_neighbor *n)
       /* Get and remove packet from ringbuf (remove committed through an atomic operation */
       int16_t get_index = ringbufindex_get(&n->tx_ringbuf);
       if(get_index != -1) {
+#ifdef TSCH_CALLBACK_QUEUE_CHANGED
+        TSCH_CALLBACK_QUEUE_CHANGED(TSCH_QUEUE_EVENT_SHRINK, n);
+#endif
         return n->tx_array[get_index];
       } else {
         return NULL;
@@ -310,6 +331,9 @@ tsch_queue_flush_all(void)
     while(n != NULL) {
       struct tsch_neighbor *next_n = list_item_next(n);
       tsch_queue_flush_nbr_queue(n);
+#ifdef TSCH_CALLBACK_QUEUE_CHANGED
+      TSCH_CALLBACK_QUEUE_CHANGED(TSCH_QUEUE_EVENT_SHRINK, n);
+#endif
       n = next_n;
     }
   }
@@ -329,6 +353,9 @@ tsch_queue_free_unused_neighbors(void)
       if(!n->is_broadcast && !n->is_time_source && !n->tx_links_count
          && tsch_queue_is_empty(n)) {
         tsch_queue_remove_nbr(n);
+#ifdef TSCH_CALLBACK_QUEUE_CHANGED
+        TSCH_CALLBACK_QUEUE_CHANGED(TSCH_QUEUE_EVENT_SHRINK, n);
+#endif
       }
       n = next_n;
     }
