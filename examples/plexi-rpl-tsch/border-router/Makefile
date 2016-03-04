@@ -1,0 +1,40 @@
+CONTIKI_PROJECT = border-router
+all: $(CONTIKI_PROJECT) 
+
+TARGET ?= jn516x
+
+CONTIKI=../../..
+
+CONTIKI_WITH_IPV6 = 1
+
+CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
+PROJECTDIRS += .. ../tools
+PROJECT_SOURCEFILES += rpl-tools.c
+PROJECT_SOURCEFILES += slip-bridge.c slip.c
+MODULES += core/net/mac/tsch
+
+CFLAGS += -DWITH_COAP
+CFLAGS += -DREST=coap_rest_implementation
+CFLAGS += -DUIP_CONF_TCP=0
+APPS += json
+APPS += er-coap
+APPS += rest-engine
+APPS += plexi
+
+ifeq ($(PREFIX),)
+ PREFIX = aaaa::1/64
+endif
+
+include $(CONTIKI)/Makefile.include
+
+#using XON/XOFF flow control
+connect-router-sw:	$(CONTIKI)/tools/tunslip6
+	sudo $(CONTIKI)/tools/tunslip6 -X -B 1000000 $(PREFIX)
+
+#using hw flow control	
+connect-router-hw:	$(CONTIKI)/tools/tunslip6
+	sudo $(CONTIKI)/tools/tunslip6 -H -B 1000000 $(PREFIX)
+
+#using no flow control	
+connect-router-no:	$(CONTIKI)/tools/tunslip6
+	sudo $(CONTIKI)/tools/tunslip6 -B 1000000 $(PREFIX)
