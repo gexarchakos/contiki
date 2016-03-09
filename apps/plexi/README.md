@@ -18,6 +18,7 @@ The first implementation of plexi interface is done on Contiki OS v3.0. That is,
 ## Configuration
 
 To use **_plexi_** you need to set a number of C preprocessor flags and/or parameters in the configuration, i.e. header file, of your project.
+
 1. To disable/enable a module use the following flags:
    * Define `PLEXI_WITH_RPL_DAG_RESOURCE` as `0` or `1`, e.g.:
    ```
@@ -64,6 +65,7 @@ To use **_plexi_** you need to set a number of C preprocessor flags and/or param
 ## Usage
 
 To use **_plexi_**, follow the steps below:
+
 1. Create a `project-conf.h` file in your project folder with the configuration of **_plexi_** as detailed above. Include that file in your application.
 2. Add it to your makefile `APPS` with `APPS += plexi`.
 3. Start **_plexi_** by calling `plexi_init()` from your application, after
