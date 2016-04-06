@@ -37,7 +37,11 @@
 #ifndef __TRAFFIC_CDF_H__
 #define __TRAFFIC_CDF_H__
 
-static const int STDNORMAL [101] = {
+#if TRAFFIC_CDF == STDNORMAL
+#define TRAFFIC_CDF_SIZE 101
+#endif
+
+static const int STDNORMAL [TRAFFIC_CDF_SIZE] = {
   2,
   3,
   4,

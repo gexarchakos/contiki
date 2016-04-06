@@ -37,11 +37,13 @@
 #include "contiki.h"
 #include "net/rpl/rpl.h"
 #include "traffic.h"
-#include "rpl-tools.h"
 
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
+const char *sinks[TRAFFIC_DESTINATIONS_COUNT] = {
+  "c30c:0:0:1"
+};
 
 /*---------------------------------------------------------------------------*/
 PROCESS(node_process, "RPL Node");
@@ -55,15 +57,20 @@ PROCESS_THREAD(node_process, ev, data)
   NETSTACK_MAC.on();
   
   traffic_init();
-  static struct etimer et;
-  /* Print out routing tables every minute */
-  etimer_set(&et, CLOCK_SECOND * 60);
   while(1) {
-    //print_network_status();
-    PROCESS_YIELD_UNTIL(etimer_expired(&et));
-    etimer_reset(&et);
+    PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_EXIT);
   }
-  
+  traffic_end();
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
+
+int my_awesome_payload(char* buffer, int max) {
+  char* temp = "i spam";
+  int i;
+  for(i=0; i<7; i++)
+  {
+    buffer[i] = temp[i];
+  }
+  return 6;
+}

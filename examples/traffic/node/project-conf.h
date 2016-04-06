@@ -37,4 +37,11 @@
 
 #include "../common-conf.h"
 
+#define TRAFFIC_DESTINATIONS sinks
+#define TRAFFIC_DESTINATIONS_COUNT 1
+
+#define TRAFFIC_TRANSMIT_PAYLOAD my_awesome_payload
+
+int my_awesome_payload(char* buffer, int max);
+
 #endif /* __PROJECT_CONF_H__ */

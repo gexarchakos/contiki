@@ -8,8 +8,7 @@ CONTIKI=../../..
 CONTIKI_WITH_IPV6 = 1
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
-PROJECTDIRS += .. ../tools
-PROJECT_SOURCEFILES += rpl-tools.c
+PROJECTDIRS += .. 
 PROJECT_SOURCEFILES += slip-bridge.c slip.c
 APPS += traffic
 

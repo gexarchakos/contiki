@@ -30,7 +30,6 @@
 #include "contiki.h"
 #include "dev/slip.h"
 #include "net/rpl/rpl.h"
-#include "rpl-tools.h"
 #include "traffic.h"
 
 #define DEBUG DEBUG_PRINT
@@ -105,14 +104,10 @@ PROCESS_THREAD(border_router_process, ev, data)
   
   NETSTACK_MAC.on();
   traffic_init();
-  static struct etimer et;
-  /* Print out routing tables every minute */
-  etimer_set(&et, CLOCK_SECOND * 60);
   while(1) {
-    //print_network_status();
-    PROCESS_YIELD_UNTIL(etimer_expired(&et));
-    etimer_reset(&et);
+    PROCESS_WAIT_EVENT_UNTIL(ev == PROCESS_EVENT_EXIT);
   }
+  traffic_end();
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/

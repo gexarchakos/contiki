@@ -56,11 +56,9 @@
 #include "net/ip/uip-debug.h"
 #define DEBUG DEBUG_FULL
 
-
+#if defined TRAFFIC_TRANSMIT_PAYLOAD && defined TRAFFIC_DESTINATIONS && TRAFFIC_DESTINATIONS_COUNT
 static int total_time = 0;
 static unsigned int interval = 0;
-
-static struct uip_udp_conn *udp_conn;
 
 static unsigned int
 udp_interval(const int* cdf, int size)
@@ -74,6 +72,10 @@ udp_interval(const int* cdf, int size)
   }
   return (unsigned int)65536;
 }
+
+#endif
+
+static struct uip_udp_conn *udp_conn;
 
 int
 traffic_str_to_ipaddr(uip_ipaddr_t* address, char *na_inbuf, int bufsize)
@@ -184,13 +186,6 @@ traffic_str_to_ipaddr(uip_ipaddr_t* address, char *na_inbuf, int bufsize)
 	return 1;
 }
 
-
-void 
-traffic_receive_notification(void)
-{
-  printf("TRAFFIC: new udp traffic received\n");
-}
-
 int
 traffic_transmit_hello(char* buffer, int max)
 {
@@ -207,30 +202,43 @@ PROCESS(traffic_process, "Traffic Generator process");
 PROCESS_THREAD(traffic_process, ev, data)
 {
   PROCESS_BEGIN();
+  printf("TRAFFIC: process started\n");
 #ifndef TRAFFIC_CDF
   PROCESS_END();
 #endif
-  static struct etimer et;
   
   /* Listen to any host on 8185 */
   udp_conn = udp_new(NULL, 0, NULL);
   udp_bind(udp_conn, UIP_HTONS(TRAFFIC_PORT));
   /* Wait for timer event 
      On timer event, handle next sample */
+#if defined TRAFFIC_TRANSMIT_PAYLOAD && defined TRAFFIC_DESTINATIONS && TRAFFIC_DESTINATIONS_COUNT
+  static struct etimer et;
   interval = udp_interval(TRAFFIC_CDF, TRAFFIC_CDF_SIZE);
+#ifdef TRAFFIC_CDF_SHRINK_FACTOR
+  interval = interval >> TRAFFIC_CDF_SHRINK_FACTOR;
+#endif
   etimer_set(&et, interval*CLOCK_SECOND);
+#endif
   while(1) {
     PROCESS_WAIT_EVENT();
-#ifdef TRAFFIC_RECEIVE_CALLBACK
     if (ev == tcpip_event) {
-      traffic_receive_notification();
-    }
+      if(uip_newdata()) {
+        ((char *)uip_appdata)[uip_datalen()] = '\0';
+        printf("TRAFFIC: <- [");
+		uip_debug_ipaddr_print(&UIP_IP_BUF->srcipaddr);
+		printf("]:%u, \"%s\"\n",uip_ntohs(UIP_UDP_BUF->srcport), (char *)uip_appdata);
+#ifdef TRAFFIC_RECEIVE_CALLBACK
+        TRAFFIC_RECEIVE_CALLBACK(&UIP_IP_BUF->srcipaddr, uip_ntohs(UIP_UDP_BUF->srcport), (char *)uip_appdata);
 #endif
-#ifdef TRAFFIC_TRANSMIT_PAYLOAD
+      }
+    }
+#if defined TRAFFIC_TRANSMIT_PAYLOAD && defined TRAFFIC_DESTINATIONS && TRAFFIC_DESTINATIONS_COUNT
     if (etimer_expired(&et) ) {
       total_time += interval;
       uip_ipaddr_t destination;
-      traffic_str_to_ipaddr(&destination,(char*)destinations[random_rand() % DESTINATIONS_COUNT],128);
+	  char *addr_str = (char*)TRAFFIC_DESTINATIONS[random_rand() % TRAFFIC_DESTINATIONS_COUNT];
+      traffic_str_to_ipaddr(&destination,addr_str,strlen(addr_str)+1);
 	  int i;
 	  int skip = 0;
       uint8_t state;
@@ -245,12 +253,17 @@ PROCESS_THREAD(traffic_process, ev, data)
 	  }  
 	  if(!skip)
       {
-        printf("TRAFFIC: after %u sec a new UDP is ready to be send\n",interval);
-		char buffer[UIP_APPDATA_SIZE];
+        char buffer[UIP_APPDATA_SIZE];
 		int siz = TRAFFIC_TRANSMIT_PAYLOAD(buffer, UIP_APPDATA_SIZE);
-        uip_udp_packet_sendto(udp_conn, buffer, siz, &destination, UIP_HTONS(TRAFFIC_PORT));
+        printf("TRAFFIC: -> [");
+		uip_debug_ipaddr_print(&destination);
+		printf("]:%u, \"%s\" //after delay of %usec\n",TRAFFIC_PORT, buffer, interval);
+		uip_udp_packet_sendto(udp_conn, buffer, siz, &destination, UIP_HTONS(TRAFFIC_PORT));
       }
       interval = udp_interval(TRAFFIC_CDF, TRAFFIC_CDF_SIZE);
+#ifdef TRAFFIC_CDF_SHRINK_FACTOR
+      interval = interval >> TRAFFIC_CDF_SHRINK_FACTOR;
+#endif
       etimer_reset_with_new_interval(&et, interval*CLOCK_SECOND);
     }
 #endif
@@ -262,4 +275,10 @@ void
 traffic_init()
 {
   process_start(&traffic_process, NULL);
+}
+
+void
+traffic_end()
+{
+  process_exit(&traffic_process);
 }

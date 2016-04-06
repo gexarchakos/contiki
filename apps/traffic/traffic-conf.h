@@ -37,20 +37,17 @@
 #ifndef __TRAFFIC_CONF_H__
 #define __TRAFFIC_CONF_H__
 
-#undef NETSTACK_CONF_WITH_IPV6
-#define NETSTACK_CONF_WITH_IPV6 1
-
-
-#define DESTINATIONS_COUNT 1
-
-static const char destinations[DESTINATIONS_COUNT][128] = {
-  "fe80::c30c:0:0:1"
-};
-
+#ifndef TRAFFIC_PORT
 #define TRAFFIC_PORT 9011
+#endif
 
+#ifndef TRAFFIC_TRANSMIT_PAYLOAD
 #define TRAFFIC_TRANSMIT_PAYLOAD traffic_transmit_hello
-#define TRAFFIC_RECEIVE_CALLBACK traffic_receive_notification
+#endif
+
+#ifndef TRAFFIC_CDF
 #define TRAFFIC_CDF STDNORMAL
-#define TRAFFIC_CDF_SIZE 101
+#define TRAFFIC_CDF_SHRINK_FACTOR 5
+#endif
+
 #endif
