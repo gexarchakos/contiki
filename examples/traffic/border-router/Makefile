@@ -20,14 +20,20 @@ endif
 
 include $(CONTIKI)/Makefile.include
 
+ifeq($(TARGET),jn516x)
+ BAUDRATE = 1000000
+else
+ BAUDRATE = 115200
+endif 
+
 #using XON/XOFF flow control
 connect-router-sw:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -X -B 1000000 $(PREFIX)
+	sudo $(CONTIKI)/tools/tunslip6 -X -B $(BAUDRATE) $(PREFIX)
 
 #using hw flow control	
 connect-router-hw:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -H -B 1000000 $(PREFIX)
+	sudo $(CONTIKI)/tools/tunslip6 -H -B $(BAUDRATE) $(PREFIX)
 
 #using no flow control	
 connect-router-no:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -B 1000000 $(PREFIX)
+	sudo $(CONTIKI)/tools/tunslip6 -B $(BAUDRATE) $(PREFIX)
