@@ -38,10 +38,6 @@
 #undef QUEUEBUF_CONF_NUM
 #define QUEUEBUF_CONF_NUM 4
 
-/* The routing table size */
-#undef UIP_CONF_MAX_ROUTES
-#define UIP_CONF_MAX_ROUTES  0
-
 /* Network config */
 #undef SICSLOWPAN_CONF_FRAG
 #define SICSLOWPAN_CONF_FRAG     1

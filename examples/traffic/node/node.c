@@ -40,9 +40,20 @@ AUTOSTART_PROCESSES(&node_process);
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(node_process, ev, data)
 {
+  static struct etimer et;
+  
   PROCESS_BEGIN();
 
   NETSTACK_MAC.on();
+  
+  rpl_dag_t* dodag = rpl_get_any_dag();
+  
+  etimer_set(&et, CLOCK_SECOND);
+  while(!dodag->joined) {
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    dodag = rpl_get_any_dag();
+    etimer_restart(&et);
+  }
   
   traffic_init();
   while(1) {
