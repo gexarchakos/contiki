@@ -35,7 +35,6 @@
 
 #ifndef TRAFFIC_CDF
 #define TRAFFIC_CDF STDNORMAL
-#define TRAFFIC_CDF_SHRINK_FACTOR 5
 #endif
 
 #endif

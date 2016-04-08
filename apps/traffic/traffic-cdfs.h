@@ -27,6 +27,14 @@
 
 #if TRAFFIC_CDF == STDNORMAL
 #define TRAFFIC_CDF_SIZE 101
+#ifndef TRAFFIC_CDF_SHRINK_FACTOR
+#define TRAFFIC_CDF_SHRINK_FACTOR 5
+#endif
+#elif TRAFFIC_CDF == GPARETO
+#define TRAFFIC_CDF_SIZE 21
+#ifndef TRAFFIC_CDF_SHRINK_FACTOR
+#define TRAFFIC_CDF_SHRINK_FACTOR 0
+#endif
 #endif
 
 static const int STDNORMAL [TRAFFIC_CDF_SIZE] = {
@@ -131,6 +139,30 @@ static const int STDNORMAL [TRAFFIC_CDF_SIZE] = {
   65532,
   65533,
   65534
+};
+
+static const int GPARETO [TRAFFIC_CDF_SIZE] = {
+  0,
+  41427,
+  56667,
+  62273,
+  64336,
+  65094,
+  65374,
+  65476,
+  65514,
+  65528,
+  65533,
+  65535,
+  65536,
+  65536,
+  65536,
+  65536,
+  65536,
+  65536,
+  65536,
+  65536,
+  65536
 };
 
 #endif

@@ -54,7 +54,7 @@ udp_interval(const int* cdf, int size)
   for(i=0; i<size; i++)
   {
     if(tmp<=cdf[i])
-      return cdf[i];
+      return i;
   }
   return (unsigned int)65536;
 }
@@ -191,9 +191,11 @@ PROCESS_THREAD(traffic_process, ev, data)
   printf("TRAFFIC: process started\n");
 #ifndef TRAFFIC_CDF
   PROCESS_END();
-#endif
+  printf("TRAFFIC: process ended\n");
+}
+#else
   
-  /* Listen to any host on 8185 */
+  /* Listen to any host */
   udp_conn = udp_new(NULL, 0, NULL);
   udp_bind(udp_conn, UIP_HTONS(TRAFFIC_PORT));
   /* Wait for timer event 
@@ -255,7 +257,9 @@ PROCESS_THREAD(traffic_process, ev, data)
 #endif
   }
   PROCESS_END();
+  printf("TRAFFIC: process ended\n");
 }
+#endif
 
 void
 traffic_init()
