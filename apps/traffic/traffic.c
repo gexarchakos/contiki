@@ -54,7 +54,7 @@ udp_interval(const int* cdf, int size)
   for(i=0; i<size; i++)
   {
     if(tmp<=cdf[i])
-      return cdf[i];
+      return i;
   }
   return (unsigned int)65536;
 }
