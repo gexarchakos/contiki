@@ -7,7 +7,6 @@ CONTIKI=../../..
 
 CONTIKI_WITH_IPV6 = 1
 
-MODULES += core/net/mac/tsch
 PROJECTDIRS += .. ../tools
 PROJECT_SOURCEFILES += rpl-tools.c
 
@@ -18,6 +17,10 @@ CFLAGS += -DUIP_CONF_TCP=0
 APPS += json
 APPS += er-coap
 APPS += rest-engine
+
+CFLAGS += -DWITH_TSCH
+CFLAGS += -DWITH_PLEXI
+MODULES += core/net/mac/tsch
 APPS += plexi
 
 include $(CONTIKI)/Makefile.include

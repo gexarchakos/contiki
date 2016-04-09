@@ -7,11 +7,17 @@ CONTIKI=../../..
 
 CONTIKI_WITH_IPV6 = 1
 
+CFLAGS += -ffunction-sections
+LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
+ 
+CFLAGS += -DWITH_TSCH
+CFLAGS += -DWITH_PLEXI
+MODULES += core/net/mac/tsch
+APPS += plexi
+
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 PROJECTDIRS += .. ../tools
-PROJECT_SOURCEFILES += rpl-tools.c
-PROJECT_SOURCEFILES += slip-bridge.c slip.c
-MODULES += core/net/mac/tsch
+PROJECT_SOURCEFILES += rpl-tools.c slip-bridge.c slip.c
 
 CFLAGS += -DWITH_COAP
 CFLAGS += -DREST=coap_rest_implementation
@@ -19,7 +25,6 @@ CFLAGS += -DUIP_CONF_TCP=0
 APPS += json
 APPS += er-coap
 APPS += rest-engine
-APPS += plexi
 
 ifeq ($(PREFIX),)
  PREFIX = aaaa::1/64
@@ -27,14 +32,20 @@ endif
 
 include $(CONTIKI)/Makefile.include
 
+ifeq ($(TARGET),jn516x)
+ BAUDRATE = 1000000
+else
+ BAUDRATE = 115200
+endif
+
 #using XON/XOFF flow control
 connect-router-sw:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -X -B 1000000 $(PREFIX)
+	sudo $(CONTIKI)/tools/tunslip6 -X -B $(BAUDRATE) $(PREFIX)
 
 #using hw flow control	
 connect-router-hw:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -H -B 1000000 $(PREFIX)
+	sudo $(CONTIKI)/tools/tunslip6 -H -B $(BAUDRATE) $(PREFIX)
 
 #using no flow control	
 connect-router-no:	$(CONTIKI)/tools/tunslip6
-	sudo $(CONTIKI)/tools/tunslip6 -B 1000000 $(PREFIX)
+	sudo $(CONTIKI)/tools/tunslip6 -B $(BAUDRATE) $(PREFIX)

@@ -53,7 +53,7 @@
 #ifndef PLEXI_DENSE_LINK_STATISTICS
 /** \brief Flag to condense the statistics kept. Memory efficient but potential loss of information
  */
-#define PLEXI_DENSE_LINK_STATISTICS         0
+#define PLEXI_DENSE_LINK_STATISTICS         1
 #endif
 
 #ifndef TSCH_CALLBACK_REMOVE_LINK

@@ -1042,9 +1042,12 @@ plexi_printsbin(plexi_stats_value_st a)
     printf("%c", buf[i]);
   }
 }
+
 void
 plexi_packet_received(void)
 {
+#if TSCH_WITH_LINK_STATISTICS
+
 #if PLEXI_DENSE_LINK_STATISTICS == 0
   linkaddr_t *sender = (linkaddr_t *)packetbuf_addr(PACKETBUF_ADDR_SENDER);
 #endif
@@ -1097,10 +1100,12 @@ plexi_packet_received(void)
       stats = stats->next;
     }
   }
+#endif
 }
 void
 plexi_packet_sent(int mac_status)
 {
+#if TSCH_WITH_LINK_STATISTICS
   if(mac_status == MAC_TX_OK && packetbuf_attr(PACKETBUF_ATTR_MAC_ACK)) {
     struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_by_handle((uint16_t)packetbuf_attr(PACKETBUF_ATTR_TSCH_SLOTFRAME));
     uint16_t slotoffset = (uint16_t)packetbuf_attr(PACKETBUF_ATTR_TSCH_TIMESLOT);
@@ -1115,6 +1120,7 @@ plexi_packet_sent(int mac_status)
       }
     }
   }
+#endif
 }
 void
 plexi_link_statistics_init()

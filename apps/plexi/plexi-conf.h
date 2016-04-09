@@ -66,6 +66,11 @@
  * \brief Switch plexi-link-statistics module on (1) or off (0)
  */
 #define PLEXI_WITH_LINK_STATISTICS          1
+#undef TSCH_WITH_LINK_STATISTICS
+/**
+ * \brief (De)activate code parts in tsch module related to keeping link statistics
+ */
+#define TSCH_WITH_LINK_STATISTICS PLEXI_WITH_LINK_STATISTICS
 #endif
 
 #ifndef PLEXI_WITH_QUEUE_STATISTICS
@@ -74,10 +79,6 @@
  */
 #define PLEXI_WITH_QUEUE_STATISTICS         1
 #endif
-
-#undef TSCH_WITH_LINK_STATISTICS
-#define TSCH_WITH_LINK_STATISTICS PLEXI_WITH_LINK_STATISTICS
-
 
 
 /** \brief Maximum size of buffer for CoAP replies

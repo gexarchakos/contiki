@@ -48,7 +48,7 @@
 #define COAP_CONF_MAX_OBSERVEES 2
 
 #undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE      64
+#define REST_MAX_CHUNK_SIZE      20
 
 /* Queues */
 #undef QUEUEBUF_CONF_NUM
@@ -56,10 +56,6 @@
 
 #undef TSCH_QUEUE_CONF_NUM_PER_NEIGHBOR
 #define TSCH_QUEUE_CONF_NUM_PER_NEIGHBOR 4
-
-/* The routing table size */
-#undef UIP_CONF_MAX_ROUTES
-#define UIP_CONF_MAX_ROUTES  0
 
 /* Network config */
 #undef SICSLOWPAN_CONF_FRAG
@@ -90,5 +86,18 @@
 /* NullRDC: check for autoack in S/W */
 #undef NULLRDC_CONF_802154_AUTOACK
 #define NULLRDC_CONF_802154_AUTOACK 1
+
+#if WITH_PLEXI
+//#undef PLEXI_WITH_RPL_DAG_RESOURCE
+//#define PLEXI_WITH_RPL_DAG_RESOURCE         1
+#undef PLEXI_WITH_TSCH_RESOURCE
+#define PLEXI_WITH_TSCH_RESOURCE            0
+#undef PLEXI_WITH_NEIGHBOR_RESOURCE
+#define PLEXI_WITH_NEIGHBOR_RESOURCE        0
+#undef PLEXI_WITH_LINK_STATISTICS
+#define PLEXI_WITH_LINK_STATISTICS          0
+#undef PLEXI_WITH_QUEUE_STATISTICS
+#define PLEXI_WITH_QUEUE_STATISTICS         0
+#endif
 
 #endif /* __COMMON_CONF_SKY_Z1_H__ */
