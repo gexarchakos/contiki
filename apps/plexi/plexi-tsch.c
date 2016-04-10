@@ -43,7 +43,6 @@
  */
 
 #include "plexi-conf.h"
-#if PLEXI_WITH_TSCH_RESOURCE
 
 #include "plexi-interface.h"
 #include "plexi.h"
@@ -904,6 +903,4 @@ print_stats(uint16_t id, uint8_t metric, plexi_stats_value_st value)
     CONTENT_PRINTF("%u}", (unsigned)value);
   }
 }
-#endif
-
 #endif

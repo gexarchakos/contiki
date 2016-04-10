@@ -38,8 +38,6 @@
 
 #include "plexi-conf.h"
 
-#if PLEXI_WITH_LINK_STATISTICS
-
 #include "plexi-interface.h"
 #include "plexi.h"
 
@@ -1132,4 +1130,3 @@ plexi_link_statistics_init()
 #endif
   rest_activate_resource(&resource_6top_stats, STATS_RESOURCE);
 }
-#endif

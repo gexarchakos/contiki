@@ -49,7 +49,6 @@
  */
 
 #include "plexi-conf.h"
-#if PLEXI_WITH_NEIGHBOR_RESOURCE
 
 #include "plexi-interface.h"
 
@@ -381,4 +380,3 @@ aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value)
     }
   }
 }
-#endif
