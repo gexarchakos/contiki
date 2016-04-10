@@ -43,7 +43,6 @@
  */
 
 #include "plexi-conf.h"
-#if PLEXI_WITH_TSCH_RESOURCE
 
 #include "plexi-interface.h"
 #include "plexi.h"
@@ -55,6 +54,7 @@
 
 #include "er-coap-engine.h"
 #include "er-coap-block1.h"
+#include "net/mac/tsch/tsch-schedule.h"
 
 #include <stdlib.h>
 
@@ -210,12 +210,13 @@ static int inbox_post_link_lock = PLEXI_REQUEST_CONTENT_UNLOCKED;
 static unsigned char inbox_post_link[MAX_DATA_LEN];
 static size_t inbox_post_link_len = 0;
 
+#if PLEXI_WITH_LINK_STATISTICS
+static uint8_t first_stat = 1;
 static void print_stats(uint16_t id, uint8_t metric, plexi_stats_value_st value);
+#endif
 
 static uint16_t new_tx_slotframe = 0;
 static uint16_t new_tx_timeslot = 0;
-
-static uint8_t first_stat = 1;
 
 static void
 plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
@@ -882,6 +883,8 @@ plexi_tsch_init()
   rest_activate_resource(&resource_6top_slotframe, FRAME_RESOURCE);
   rest_activate_resource(&resource_6top_links, LINK_RESOURCE);
 }
+
+#if PLEXI_WITH_LINK_STATISTICS
 static void
 print_stats(uint16_t id, uint8_t metric, plexi_stats_value_st value)
 {

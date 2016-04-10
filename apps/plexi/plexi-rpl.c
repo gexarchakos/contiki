@@ -51,8 +51,6 @@
 
 #include "plexi-interface.h"
 
-#if PLEXI_WITH_RPL_DAG_RESOURCE
-
 #include "er-coap-engine.h"
 #include "net/rpl/rpl.h"
 
@@ -205,4 +203,3 @@ plexi_rpl_init()
   static struct uip_ds6_notification n;
   uip_ds6_notification_add(&n, rpl_changed_callback);
 }
-#endif

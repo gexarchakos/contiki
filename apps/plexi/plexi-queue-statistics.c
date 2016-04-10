@@ -38,8 +38,6 @@
 
 #include "plexi-conf.h"
 
-#if PLEXI_WITH_QUEUE_STATISTICS
-
 #include <stdlib.h>
 
 #include "plexi-queue-statistics.h"
@@ -140,4 +138,3 @@ plexi_queue_statistics_init()
 {
   rest_activate_resource(&resource_6top_queue, QUEUE_RESOURCE);
 }
-#endif
