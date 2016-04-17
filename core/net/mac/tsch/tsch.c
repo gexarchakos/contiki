@@ -37,6 +37,7 @@
  * \author
  *         Simon Duquennoy <simonduq@sics.se>
  *         Beshr Al Nahas <beshr@sics.se>
+ *         Ilker Oztelcan <ioztelcan@tue.nl>
  *
  */
 
@@ -54,6 +55,7 @@
 #include "net/mac/tsch/tsch-packet.h"
 #include "net/mac/tsch/tsch-security.h"
 #include "lib/random.h"
+#include "lib/list.h"
 
 #if FRAME802154_VERSION < FRAME802154_IEEE802154E_2012
 #error TSCH: FRAME802154_VERSION must be at least FRAME802154_IEEE802154E_2012
@@ -341,6 +343,52 @@ eb_input(struct input_packet *current_input)
 }
 
 /*---------------------------------------------------------------------------*/
+/* If EB sniffing is on, initiate related parts. */
+#ifdef TSCH_EB_SNIFFER_CALLBACK
+LIST(sniffers);
+/*---------------------------------------------------------------------------*/
+/*---------------------------------------------------------------------------*/
+/* If EB sniffing is on, initiate related parts. */
+#ifdef TSCH_EB_SNIFFER_CALLBACK
+LIST(sniffers);
+
+/*---------------------------------------------------------------------------*/
+void
+eb_sniffer_add(struct eb_sniffer *s)
+{
+  list_add(sniffers, s);
+}
+/*---------------------------------------------------------------------------*/
+void
+eb_sniffer_remove(struct eb_sniffer *s)
+{
+  list_remove(sniffers, s);
+}
+
+static void
+tsch_tx_eb_sniffer(struct tsch_packet *p) 
+{
+  struct eb_sniffer *s;
+  for(s = list_head(sniffers); s != NULL; s = list_item_next(s)) {
+	if(s->output_callback != NULL) {
+	  s->output_callback(p->header_len);
+	}  
+  }
+}
+
+static void
+tsch_rx_eb_sniffer(struct input_packet *p) 
+{
+  struct eb_sniffer *s;
+  for(s = list_head(sniffers); s != NULL; s = list_item_next(s)) {
+	if(s->input_callback != NULL) {
+	  s->input_callback(p->payload);
+	}  
+  }
+}
+#endif /*TSCH_EB_SNIFFER_CALLBACK*/
+
+/*---------------------------------------------------------------------------*/
 /* Process pending input packet(s) */
 static void
 tsch_rx_process_pending()
@@ -365,6 +413,10 @@ tsch_rx_process_pending()
 
     /* Remove input from ringbuf */
     ringbufindex_get(&input_ringbuf);
+
+#ifdef TSCH_EB_SNIFFER_CALLBACK
+    tsch_rx_eb_sniffer(current_input);
+#endif /*TSCH_EB_SNIFFER_CALLBACK*/
 
     if(is_data) {
       /* Pass to upper layers */

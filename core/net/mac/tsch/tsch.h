@@ -130,6 +130,13 @@
 #define TSCH_AUTOSELECT_TIME_SOURCE 0
 #endif /* TSCH_CONF_EB_AUTOSELECT */
 
+/* Enable Enhanced Beacon sniffer to retrieve the payload */  
+#ifdef TSCH_EB_SNIFFER_CALLBACK
+#define TSCH_EB_SNIFFER_CALLBACK TSCH_EB_SNIFFER_CALLBACK
+#else
+#define TSCH_EB_SNIFFER_CALLBACK 1	
+#endif /*TSCH_EB_SNIFFER_CALLBACK*/
+
 /*********** Callbacks *********/
 
 /* Called by TSCH when joining a network */
@@ -163,5 +170,22 @@ void tsch_set_eb_period(uint32_t period);
 void tsch_set_coordinator(int enable);
 /* Set the pan as secured or not */
 void tsch_set_pan_secured(int enable);
+
+#ifdef TSCH_EB_SNIFFER_CALLBACK
+/********** EB Sniffer *********/
+
+struct eb_sniffer {
+  struct eb_sniffer *next;
+  //struct frame802154_t frame;
+  void (* input_callback)(uint8_t *data);
+  void (* output_callback)(uint8_t header_len);
+};
+
+#define EB_SNIFFER(name, input_callback, output_callback) \
+static struct eb_sniffer name = { NULL, input_callback, output_callback }
+
+void eb_sniffer_add(struct eb_sniffer *s);
+void eb_sniffer_remove(struct eb_sniffer *s);
+#endif /*TSCH_EB_SNIFFER_CALLBACK*/
 
 #endif /* __TSCH_H__ */
