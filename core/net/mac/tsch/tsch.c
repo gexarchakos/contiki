@@ -346,11 +346,6 @@ eb_input(struct input_packet *current_input)
 /* If EB sniffing is on, initiate related parts. */
 #ifdef TSCH_EB_SNIFFER_CALLBACK
 LIST(sniffers);
-/*---------------------------------------------------------------------------*/
-/*---------------------------------------------------------------------------*/
-/* If EB sniffing is on, initiate related parts. */
-#ifdef TSCH_EB_SNIFFER_CALLBACK
-LIST(sniffers);
 
 /*---------------------------------------------------------------------------*/
 void
