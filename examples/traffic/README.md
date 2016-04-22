@@ -23,6 +23,9 @@ traffic_init();
 traffic_end();
 ...
 ```
+
+> Note here that border-router is not supposed to generate traffic but only to receive. Hence, destinations array is not defined.
+
 * In `node/Makefile` the line:
 ```
 APPS+=traffic
