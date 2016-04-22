@@ -51,4 +51,4 @@ traffic_end();
 ...
 ```
 
-For more see the app `traffic`.
+For more see the app [apps/traffic](https://github.com/gexarchakos/contiki/tree/traffic/apps/traffic).
