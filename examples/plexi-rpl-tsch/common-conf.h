@@ -37,7 +37,7 @@
 /* Global config flags */
 
 #define WITH_TSCH_SECURITY 0
-#define TSCH_LOG_CONF_LEVEL 2
+#define TSCH_LOG_CONF_LEVEL 0
 #define WITH_COAP_RESOURCES 1
 
 #define TSCH_CONFIG_DEFAULT                  0
