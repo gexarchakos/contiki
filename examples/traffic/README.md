@@ -23,6 +23,9 @@ traffic_init();
 traffic_end();
 ...
 ```
+
+> Note here that border-router is not supposed to generate traffic but only to receive. Hence, destinations array is not defined.
+
 * In `node/Makefile` the line:
 ```
 APPS+=traffic
@@ -48,4 +51,4 @@ traffic_end();
 ...
 ```
 
-For more see the app `traffic`.
+For more see the app [apps/traffic](https://github.com/gexarchakos/contiki/tree/traffic/apps/traffic).
