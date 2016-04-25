@@ -160,6 +160,7 @@ set_rime_addr(void)
   printf("%d\n", addr.u8[i]);
 }
 /*---------------------------------------------------------------------------*/
+#if !PROCESS_CONF_NO_PROCESS_NAMES
 static void
 print_processes(struct process *const processes[])
 {
@@ -171,6 +172,7 @@ print_processes(struct process *const processes[])
   }
   putchar('\n');
 }
+#endif
 /*--------------------------------------------------------------------------*/
 #if NETSTACK_CONF_WITH_IPV4
 static void
@@ -413,8 +415,9 @@ main(int argc, char **argv)
 
   energest_init();
   ENERGEST_ON(ENERGEST_TYPE_CPU);
-
+#if !PROCESS_CONF_NO_PROCESS_NAMES
   print_processes(autostart_processes);
+#endif
   autostart_start(autostart_processes);
 
   /*
