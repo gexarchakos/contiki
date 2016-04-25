@@ -62,7 +62,7 @@
 #ifdef TSCH_LOG_CONF_LEVEL
 #define TSCH_LOG_LEVEL TSCH_LOG_CONF_LEVEL
 #else /* TSCH_LOG_CONF_LEVEL */
-#define TSCH_LOG_LEVEL 2
+#define TSCH_LOG_LEVEL 0
 #endif /* TSCH_LOG_CONF_LEVEL */
 
 #if TSCH_LOG_LEVEL < 2 /* For log level 0 or 1, the logging functions do nothing */

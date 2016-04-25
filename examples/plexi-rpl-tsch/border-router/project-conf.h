@@ -43,6 +43,9 @@
 #undef SLIP_BRIDGE_CONF_NO_PUTCHAR
 #define SLIP_BRIDGE_CONF_NO_PUTCHAR 0
 
+#undef PROCESS_CONF_NO_PROCESS_NAMES
+#define PROCESS_CONF_NO_PROCESS_NAMES 1
+
 #include "../common-conf.h"
 
 #endif /* PROJECT_CONF_H_ */

@@ -37,4 +37,7 @@
 
 #include "../common-conf.h"
 
+#undef PROCESS_CONF_NO_PROCESS_NAMES
+#define PROCESS_CONF_NO_PROCESS_NAMES 1
+
 #endif /* __PROJECT_CONF_H__ */
