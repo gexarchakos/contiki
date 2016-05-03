@@ -15,9 +15,6 @@ CFLAGS += -Os -ffunction-sections
 LDFLAGS += -Wl,-Os,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
 endif
 
-CFLAGS += -ffunction-sections
-LDFLAGS += -Wl,--gc-sections,--undefined=_reset_vector__,--undefined=InterruptVectors,--undefined=_copy_data_init__,--undefined=_clear_bss_init__,--undefined=_end_of_init__
- 
 CFLAGS += -DWITH_TSCH
 CFLAGS += -DWITH_PLEXI
 MODULES += core/net/mac/tsch
