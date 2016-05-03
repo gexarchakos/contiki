@@ -85,6 +85,4 @@
  */
 #define MAX_DATA_LEN                        REST_MAX_CHUNK_SIZE
 
-#define DEBUG                               DEBUG_PRINT
-
 #endif

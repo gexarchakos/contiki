@@ -40,14 +40,14 @@
 #ifndef __PLEXI_TSCH_H__
 #define __PLEXI_TSCH_H__
 
-#ifndef PLEXI_LINK_UPDATE_INTERVAL
+//#ifndef PLEXI_LINK_UPDATE_INTERVAL
 /**
  * \brief plexi notifies observers of TSCH links every \ref PLEXI_LINK_UPDATE_INTERVAL secs
  *
  * \warning Not yet fully implemented. For now, slotframes and links are not observable
  */
-#define PLEXI_LINK_UPDATE_INTERVAL          (10 * CLOCK_SECOND)
-#endif
+//#define PLEXI_LINK_UPDATE_INTERVAL          (10 * CLOCK_SECOND)
+//#endif
 
 /**
  * \brief Landing initialization function of plexi-tsch module. Call from \link plexi_init \endlink to start plexi-tsch module.
