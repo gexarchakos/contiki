@@ -604,7 +604,7 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
                 if(plexi_execute_over_link_stats(print_stats, link, NULL)) {
                   CONTENT_PRINTF("]");
                 } else {
-                  plexi_reply_content_len -= sizeof(LINK_STATS_LABEL) - 5;
+                  plexi_reply_content_len -= sizeof(LINK_STATS_LABEL)+4;
                 }
 #endif
                 CONTENT_PRINTF("}");
