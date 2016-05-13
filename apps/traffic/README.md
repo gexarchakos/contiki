@@ -137,4 +137,4 @@ For the moment there are only two available PDFs in `traffic-cdfs.h`: pareto (de
 #define TRAFFIC_PORT 9876
 ```
 
-For more see the example `traffic`.
+For more see the example [examples/traffic](https://github.com/gexarchakos/contiki/tree/traffic/examples/traffic).
