@@ -48,6 +48,7 @@
 #ifndef __PLEXI_H__
 #define __PLEXI_H__
 
+#include <stdio.h>
 #include "contiki.h"
 #include "net/linkaddr.h"
 #include "lib/list.h"
@@ -114,6 +115,50 @@ extern int plexi_reply_content_len;
       plexi_reply_content_len += snprintf(plexi_reply_content + plexi_reply_content_len, sizeof(plexi_reply_content) - plexi_reply_content_len, __VA_ARGS__); } \
 }
 
+void plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_string_if_possible(char *s, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+
+/*
+#define ADD_CHAR_IF_POSSIBLE(character, buffer, bufpos, bufsize, strpos, offset) \
+  if(strpos >= offset && bufpos < bufsize) { \
+    buffer[bufpos++] = character; \
+  } \
+  ++strpos
+
+#define ADD_STRING_IF_POSSIBLE(string, buffer, bufpos, bufsize, strpos, offset) \
+  if(strpos + strlen(string) > offset) { \
+    bufpos += snprintf((char *)buffer + bufpos, \
+                       bufsize - bufpos + 1, \
+                       "%s", \
+                       string \
+                       + (offset - (int32_t)strpos > 0 ? \
+                          offset - (int32_t)strpos : 0)); \
+  } \
+  strpos += strlen(string)
+
+#define ADD_HEX_IF_POSSIBLE(hex, buffer, bufpos, bufsize, strpos, offset) \
+  int hexlen = 0; \
+  uint64_t temp_hex = (uint64_t)hex; \
+  while(temp_hex > 0) { \
+    hexlen++; \
+    temp_hex = temp_hex>>4; \
+  } \
+  int mask = 0; \
+  int i = hexlen - offset + (int32_t)strpos; \
+  while(i>0) { \
+    mask = mask<<4; \
+    mask = mask | 0xF; \
+  } \
+  if(strpos + hexlen > offset) { \
+    bufpos += snprintf((char *)buffer + bufpos, \
+                       bufsize - bufpos + 1, \
+                       "%x", \
+                       (offset - (int32_t)strpos > 0 ? \
+                          hex & mask : hex)); \
+  } \
+  strpos += strlen(string)
+*/
 /**
  * \brief Utility function. Converts na field (string containing the lower 64bit of the IPv6) to
  * 64-bit MAC.

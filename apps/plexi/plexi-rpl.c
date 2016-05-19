@@ -133,44 +133,94 @@ plexi_get_dag_handler(void *request,
                       uint16_t preferred_size,
                       int32_t *offset)
 {
+  size_t strpos = 0;
+  size_t bufpos = 0;
+  
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
   /* make sure the request accepts JSON reply or does not specify the reply type */
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
     plexi_reply_content_len = 0;
-    CONTENT_PRINTF("{");
+//    CONTENT_PRINTF("{");
+    plexi_reply_char_if_possible('{', buffer, &bufpos, preferred_size, &strpos, offset);
     /* TODO: get details per dag id other than the default */
     /* Ask RPL to provide the preferred parent or if not known (e.g. LBR) leave it empty */
     rpl_parent_t *parent = rpl_get_any_dag()->preferred_parent;
     if(parent != NULL) {
       /* retrieve the IP address of the parent */
       uip_ipaddr_t *parent_addr = rpl_get_parent_ipaddr(parent);
-      CONTENT_PRINTF("\"%s\":[\"%x:%x:%x:%x\"]", DAG_PARENT_LABEL,
-                     UIP_HTONS(parent_addr->u16[4]), UIP_HTONS(parent_addr->u16[5]),
-                     UIP_HTONS(parent_addr->u16[6]), UIP_HTONS(parent_addr->u16[7])
-                     );
+//      CONTENT_PRINTF("\"%s\":[\"%x:%x:%x:%x\"]", DAG_PARENT_LABEL,
+//                     UIP_HTONS(parent_addr->u16[4]), UIP_HTONS(parent_addr->u16[5]),
+//                     UIP_HTONS(parent_addr->u16[6]), UIP_HTONS(parent_addr->u16[7])
+//                     );
+      plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_string_if_possible(DAG_PARENT_LABEL, buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_string_if_possible("\":[\"", buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(parent_addr->u16[4]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_char_if_possible(':', buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(parent_addr->u16[5]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_char_if_possible(':', buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(parent_addr->u16[6]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_char_if_possible(':', buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(parent_addr->u16[7]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_string_if_possible("\"]", buffer, &bufpos, preferred_size, &strpos, offset);
     } else {
-      CONTENT_PRINTF("\"%s\":[]", DAG_PARENT_LABEL);
+//      CONTENT_PRINTF("\"%s\":[]", DAG_PARENT_LABEL);
+      plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_string_if_possible(DAG_PARENT_LABEL, buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_string_if_possible("\":[]", buffer, &bufpos, preferred_size, &strpos, offset);
     }
 
-    CONTENT_PRINTF(",\"%s\":[", DAG_CHILD_LABEL);
+//    CONTENT_PRINTF(",\"%s\":[", DAG_CHILD_LABEL);
+    plexi_reply_string_if_possible(",\"", buffer, &bufpos, preferred_size, &strpos, offset);
+    plexi_reply_string_if_possible(DAG_CHILD_LABEL, buffer, &bufpos, preferred_size, &strpos, offset);
+    plexi_reply_string_if_possible("\":[", buffer, &bufpos, preferred_size, &strpos, offset);
 
     nbr_table_item_t *r;
     for(r = nbr_table_head(nbr_routes); r != NULL; r = nbr_table_next(nbr_routes, r)) {
       if(r != nbr_table_head(nbr_routes)) {
-        CONTENT_PRINTF(",");
+//        CONTENT_PRINTF(",");
+        plexi_reply_char_if_possible(',', buffer, &bufpos, preferred_size, &strpos, offset);
       }
       linkaddr_t *addr = (linkaddr_t *)nbr_table_get_lladdr(nbr_routes, r);
-      CONTENT_PRINTF("\"2%02x:%02x%02x:%02x:%02x%02x\"",
-                     UIP_HTONS(addr->u8[1]), UIP_HTONS(addr->u8[2]), UIP_HTONS(addr->u8[3]),
-                     UIP_HTONS(addr->u8[5]), UIP_HTONS(addr->u8[6]), UIP_HTONS(addr->u8[7])
-                     );
+//      CONTENT_PRINTF("\"2%02x:%02x%02x:%02x:%02x%02x\"",
+//                     UIP_HTONS(addr->u8[1]), UIP_HTONS(addr->u8[2]), UIP_HTONS(addr->u8[3]),
+//                     UIP_HTONS(addr->u8[5]), UIP_HTONS(addr->u8[6]), UIP_HTONS(addr->u8[7])
+//                     );
+      plexi_reply_string_if_possible("\"2", buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(addr->u8[1]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_char_if_possible(':', buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(addr->u8[2]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(addr->u8[3]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_char_if_possible(':', buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(addr->u8[5]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_char_if_possible(':', buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(addr->u8[6]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_hex_if_possible(UIP_HTONS(addr->u8[7]), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
+      
+      if(bufpos > preferred_size && strpos - bufpos > *offset) {
+        break;
+      }
     }
-    CONTENT_PRINTF("]}");
-    /* Build the header of the reply */
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    /* Build the payload of the reply */
-    REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+//    CONTENT_PRINTF("]}");
+    plexi_reply_string_if_possible("]}", buffer, &bufpos, preferred_size, &strpos, offset);
+
+    if(bufpos > 0) {
+      /* Build the header of the reply */
+      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+      /* Build the payload of the reply */
+      REST.set_response_payload(response, buffer, bufpos);
+//      REST.set_response_payload(response, plexi_reply_content, plexi_reply_content_len);
+    } else if(strpos > 0) {
+      coap_set_status_code(response, BAD_OPTION_4_02);
+      coap_set_payload(response, "BlockOutOfScope", 15);
+    }
+    if(strpos < *offset + preferred_size) {
+      *offset = -1;
+    } else {
+      *offset += preferred_size;
+    }
   } else { /* if the client accepts a response payload format other than json, return 406 */
     coap_set_status_code(response, NOT_ACCEPTABLE_4_06);
     return;

@@ -91,7 +91,7 @@ PROCESS_THREAD(border_router_process, ev, data)
   }
   */
   prefix_set = 1;
-  uip_ip6addr(&prefix, 0xfe80, 0, 0, 0, 0, 0, 0, 0);
+  uip_ip6addr(&prefix, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
   PRINTF("Obtained prefix: ");
   uip_debug_ipaddr_print(&prefix);
   PRINTF("\n");
