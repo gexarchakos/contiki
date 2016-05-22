@@ -176,3 +176,139 @@ plexi_linkaddr_to_eui64(char *buf, linkaddr_t *addr)
   }
   return strlen(buf);
 }
+
+void
+plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+{
+  if(*strpos >= *offset && *bufpos < bufsize) {
+    buffer[(*bufpos)++] = c;
+  }
+  ++(*strpos);
+}
+
+uint8_t
+plexi_reply_string_if_possible(char *s, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+{
+  if(*strpos + strlen(s) > *offset) {
+    (*bufpos) += snprintf((char*)buffer + (unsigned int)(*bufpos),
+                       (unsigned int)bufsize - (unsigned int)(*bufpos) + 1,
+                       "%s",
+                       s
+                       + (*offset - (int32_t)(*strpos) > 0 ?
+                          *offset - (int32_t)(*strpos) : 0));
+//    if(*bufpos >= bufsize) {
+//      printf("s=%s, buffer=%s, bufpos=%d, strpos=%d\n",s,(char*)buffer,(int)*bufpos,(int)*strpos);
+//      return 0;
+//    }
+  }
+  *strpos += strlen(s);
+  return 1;
+}
+
+uint8_t
+plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+{
+  int hexlen = 0;
+  unsigned int temp_hex = hex;
+  while(temp_hex > 0) {
+    hexlen++;
+    temp_hex = temp_hex>>4;
+  }
+  int mask = 0;
+  int i = hexlen - (int)*offset + (int)(*strpos);
+  while(i>0) {
+    mask = mask<<4;
+    mask = mask | 0xF;
+  }
+  if(*strpos + hexlen > *offset) {
+    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+                       bufsize - (*bufpos) + 1,
+                       "%x",
+                       (*offset - (int32_t)(*strpos) > 0 ? \
+                          (unsigned int)hex & mask : (unsigned int)hex));
+    if(*bufpos >= bufsize) {
+      return 0;
+    }
+  }
+  *strpos += hexlen;
+  return 1;
+}
+
+uint8_t
+plexi_reply_int_if_possible(int number, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+{
+  int num_len = 0;
+  int temp_num = number<0 ? -number+1 : number;
+  
+  if(temp_num>=1000000000) num_len = 10;
+  else if(temp_num>=100000000) num_len = 9;
+  else if(temp_num>=10000000) num_len = 8;
+  else if(temp_num>=1000000) num_len = 7;
+  else if(temp_num>=100000) num_len = 6;
+  else if(temp_num>=10000) num_len = 5;
+  else if(temp_num>=1000) num_len = 4;
+  else if(temp_num>=100) num_len = 3;
+  else if(temp_num>=10) num_len = 2;
+  else num_len = 1;
+  
+  int mask = 0;
+  temp_num = number<0 ? -number : number;
+  if(temp_num>=1000000000) mask = temp_num % 10000000000;
+  else if(temp_num>=100000000) mask = temp_num % 1000000000;
+  else if(temp_num>=10000000) mask = temp_num % 100000000;
+  else if(temp_num>=1000000) mask = temp_num % 10000000;
+  else if(temp_num>=100000) mask = temp_num % 1000000;
+  else if(temp_num>=10000) mask = temp_num % 100000;
+  else if(temp_num>=1000) mask = temp_num % 10000;
+  else if(temp_num>=100) mask = temp_num % 1000;
+  else if(temp_num>=10) mask = temp_num % 100;
+  else mask = temp_num % 10;
+  
+  if(*strpos + num_len > *offset) {
+    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+                       bufsize - (*bufpos) + 1,
+                       "%d",
+                       (*offset - (int32_t)(*strpos) > 0 ?
+                          mask : number));
+  }
+  *strpos += num_len;
+  return 1;
+}
+
+uint8_t
+plexi_reply_uint_if_possible(unsigned int number, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+{
+  int num_len = 0;
+  if(number>=1000000000) num_len = 10;
+  else if(number>=100000000) num_len = 9;
+  else if(number>=10000000) num_len = 8;
+  else if(number>=1000000) num_len = 7;
+  else if(number>=100000) num_len = 6;
+  else if(number>=10000) num_len = 5;
+  else if(number>=1000) num_len = 4;
+  else if(number>=100) num_len = 3;
+  else if(number>=10) num_len = 2;
+  else num_len = 1;
+  
+  int mask = 0;
+  if(number>=1000000000) mask = number % 10000000000;
+  else if(number>=100000000) mask = number % 1000000000;
+  else if(number>=10000000) mask = number % 100000000;
+  else if(number>=1000000) mask = number % 10000000;
+  else if(number>=100000) mask = number % 1000000;
+  else if(number>=10000) mask = number % 100000;
+  else if(number>=1000) mask = number % 10000;
+  else if(number>=100) mask = number % 1000;
+  else if(number>=10) mask = number % 100;
+  else mask = number % 10;
+  
+  if(*strpos + num_len > *offset) {
+    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+                       bufsize - (*bufpos) + 1,
+                       "%d",
+                       (*offset - (int32_t)(*strpos) > 0 ?
+                          mask : number));
+  }
+  *strpos += num_len;
+  return 1;
+}

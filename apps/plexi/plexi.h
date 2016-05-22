@@ -114,6 +114,12 @@ extern int plexi_reply_content_len;
       plexi_reply_content_len += snprintf(plexi_reply_content + plexi_reply_content_len, sizeof(plexi_reply_content) - plexi_reply_content_len, __VA_ARGS__); } \
 }
 
+void plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_string_if_possible(char *s, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_int_if_possible(int number, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_uint_if_possible(unsigned int number, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+
 /**
  * \brief Utility function. Converts na field (string containing the lower 64bit of the IPv6) to
  * 64-bit MAC.

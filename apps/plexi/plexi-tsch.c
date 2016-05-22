@@ -221,7 +221,10 @@ static uint16_t new_tx_timeslot = 0;
 static void
 plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  plexi_reply_content_len = 0;
+  size_t strpos = 0;
+  size_t bufpos = 0;
+
+//  plexi_reply_content_len = 0;
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
 
@@ -232,6 +235,7 @@ plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint
 
     /* split request url to base, subresources and queries */
     int uri_len = REST.get_url(request, (const char **)(&uri_path));
+	printf("uri: %d %s\n",uri_len, uri_path);
     *(uri_path + uri_len) = '\0';
     int base_len = strlen(resource_6top_slotframe.url);
     /* pick the start of the subresource in the url buffer */
@@ -244,11 +248,17 @@ plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint
     int query_value_len = REST.get_query_variable(request, FRAME_ID_LABEL, (const char **)(&query_value));
     if(!query_value) {
       query_value_len = REST.get_query_variable(request, FRAME_SLOTS_LABEL, (const char **)(&query_value));
-    }
+	  if(query_value) {
+		  query = FRAME_SLOTS_LABEL;
+	  }
+    } else {
+		query = FRAME_ID_LABEL;
+	}
     if(query_value) {
       *(query_value + query_value_len) = '\0';
       value = (unsigned)strtoul((const char *)query_value, &end, 10);
     }
+    printf("query value: %s\n",query_value);
     /* make sure no other url structures are accepted */
     if((uri_len > base_len + 1 && strcmp(FRAME_ID_LABEL, uri_subresource) && strcmp(FRAME_SLOTS_LABEL, uri_subresource)) || (query && !query_value)) {
       coap_set_status_code(response, NOT_IMPLEMENTED_5_01);
@@ -257,33 +267,72 @@ plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint
     }
     /* iterate over all slotframes to pick the ones specified by the query */
     int item_counter = 0;
-    CONTENT_PRINTF("[");
+//    CONTENT_PRINTF("[");
+    plexi_reply_char_if_possible('[', buffer, &bufpos, preferred_size, &strpos, offset);
     struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(NULL);
     while(slotframe) {
+		printf("%d || (%d && %d) || (%d && %d) query=%s\n", !query_value, \
+		!strncmp(FRAME_ID_LABEL, query, sizeof(FRAME_ID_LABEL) - 1), slotframe->handle == value, \
+		!strncmp(FRAME_SLOTS_LABEL, query, sizeof(FRAME_SLOTS_LABEL) - 1), slotframe->size.val == value, query);
       if(!query_value || (!strncmp(FRAME_ID_LABEL, query, sizeof(FRAME_ID_LABEL) - 1) && slotframe->handle == value) || \
          (!strncmp(FRAME_SLOTS_LABEL, query, sizeof(FRAME_SLOTS_LABEL) - 1) && slotframe->size.val == value)) {
         if(item_counter > 0) {
-          CONTENT_PRINTF(",");
+//          CONTENT_PRINTF(",");
+          plexi_reply_char_if_possible(',', buffer, &bufpos, preferred_size, &strpos, offset);
         } else if(query_value && uri_len == base_len && !strncmp(FRAME_ID_LABEL, query, sizeof(FRAME_ID_LABEL) - 1) && slotframe->handle == value) {
-          plexi_reply_content_len = 0;
+//          plexi_reply_content_len = 0;
+            strpos -= bufpos;
+            bufpos = 0;
         }
         item_counter++;
+		printf("1 item_counter=%d\n",item_counter);
         if(!strcmp(FRAME_ID_LABEL, uri_subresource)) {
-          CONTENT_PRINTF("%u", slotframe->handle);
+//          CONTENT_PRINTF("%u", slotframe->handle);
+          plexi_reply_uint_if_possible(slotframe->handle, buffer, &bufpos, preferred_size, &strpos, offset);
         } else if(!strcmp(FRAME_SLOTS_LABEL, uri_subresource)) {
-          CONTENT_PRINTF("%u", slotframe->size.val);
+//          CONTENT_PRINTF("%u", slotframe->size.val);
+          plexi_reply_uint_if_possible(slotframe->size.val, buffer, &bufpos, preferred_size, &strpos, offset);
         } else {
-          CONTENT_PRINTF("{\"%s\":%u,\"%s\":%u}", FRAME_ID_LABEL, slotframe->handle, FRAME_SLOTS_LABEL, slotframe->size.val);
+//          CONTENT_PRINTF("{\"%s\":%u,\"%s\":%u}", FRAME_ID_LABEL, slotframe->handle, FRAME_SLOTS_LABEL, slotframe->size.val);
+          plexi_reply_string_if_possible("{\"", buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_string_if_possible(FRAME_ID_LABEL, buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_string_if_possible("\":", buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_uint_if_possible(slotframe->handle, buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_string_if_possible(",\"", buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_string_if_possible(FRAME_SLOTS_LABEL, buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_string_if_possible("\":", buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_uint_if_possible(slotframe->size.val, buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_char_if_possible('}', buffer, &bufpos, preferred_size, &strpos, offset);
         }
+      }
+      if(bufpos > preferred_size && strpos - bufpos > *offset) {
+        break;
       }
       slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(slotframe);
     }
     if(!query || uri_len != base_len || strncmp(FRAME_ID_LABEL, query, sizeof(FRAME_ID_LABEL) - 1)) {
-      CONTENT_PRINTF("]");
+//      CONTENT_PRINTF("]");
+      plexi_reply_char_if_possible(']', buffer, &bufpos, preferred_size, &strpos, offset);
     }
+	printf("2 item_counter=%d\n",item_counter);
+
     if(item_counter > 0) {
-      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+//      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+//      REST.set_response_payload(response, plexi_reply_content, plexi_reply_content_len);
+      if(bufpos > 0) {
+        /* Build the header of the reply */
+        REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+        /* Build the payload of the reply */
+        REST.set_response_payload(response, buffer, bufpos);
+      } else if(strpos > 0) {
+        coap_set_status_code(response, BAD_OPTION_4_02);
+        coap_set_payload(response, "BlockOutOfScope", 15);
+      }
+      if(strpos < *offset + preferred_size) {
+        *offset = -1;
+      } else {
+        *offset += preferred_size;
+      }
     } else { /* if no slotframes were found return a CoAP 404 error */
       coap_set_status_code(response, NOT_FOUND_4_04);
       coap_set_payload(response, "No slotframe was found", 22);
