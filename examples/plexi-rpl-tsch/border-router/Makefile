@@ -8,7 +8,7 @@ CONTIKI=../../..
 CONTIKI_WITH_IPV6 = 1
 
 # Set to enable compiler and linker flags to minimize memory.
-REDUCE_MEMORY_SIZE = 1
+REDUCE_MEMORY_SIZE = 0
 
 ifeq (REDUCE_MEMORY_SIZE, 1)
 CFLAGS += -Os -ffunction-sections

@@ -45,23 +45,16 @@
 #define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
-#define CONFIG_VIA_BUTTON PLATFORM_HAS_BUTTON
-#if CONFIG_VIA_BUTTON
-#include "button-sensor.h"
-#endif /* CONFIG_VIA_BUTTON */
-
 /*---------------------------------------------------------------------------*/
 PROCESS(node_process, "RPL Node");
-#if CONFIG_VIA_BUTTON
-AUTOSTART_PROCESSES(&node_process, &sensors_process);
-#else /* CONFIG_VIA_BUTTON */
+
 AUTOSTART_PROCESSES(&node_process);
-#endif /* CONFIG_VIA_BUTTON */
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(node_process, ev, data)
 {
   static struct etimer et;
+  printf("node started\n");
   PROCESS_BEGIN();
 
   /* 3 possible roles:
@@ -71,28 +64,6 @@ PROCESS_THREAD(node_process, ev, data)
   static int is_coordinator = 0;
   static enum { role_6ln, role_6dr } node_role;
   node_role = role_6ln;
-
-#if CONFIG_VIA_BUTTON
-  {
-#define CONFIG_WAIT_TIME 5
-    SENSORS_ACTIVATE(button_sensor);
-    etimer_set(&et, CLOCK_SECOND * CONFIG_WAIT_TIME);
-
-    while(!etimer_expired(&et)) {
-      printf("Init: current role: %s. Will start in %u seconds.\n",
-             node_role == role_6ln ? "6ln" : "6dr",
-             CONFIG_WAIT_TIME);
-      PROCESS_WAIT_EVENT_UNTIL(((ev == sensors_event) &&
-                                (data == &button_sensor) && button_sensor.value(0) > 0)
-                               || etimer_expired(&et));
-      if(ev == sensors_event && data == &button_sensor && button_sensor.value(0) > 0) {
-        node_role = (node_role + 1) % 2;
-        etimer_restart(&et);
-      }
-    }
-  }
-
-#endif /* CONFIG_VIA_BUTTON */
 
   printf("Init: node starting with role %s\n",
          node_role == role_6ln ? "6ln" : "6dr");
