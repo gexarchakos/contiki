@@ -15,15 +15,15 @@ APPS += traffic
 CFLAGS += -DUIP_CONF_TCP=0
 
 ifeq ($(PREFIX),)
- PREFIX = aaaa::1/64
+	PREFIX = aaaa::1/64
 endif
 
 include $(CONTIKI)/Makefile.include
 
-ifeq($(TARGET),jn516x)
- BAUDRATE = 1000000
+ifeq ($(TARGET),jn516x)
+	BAUDRATE = 1000000
 else
- BAUDRATE = 115200
+	BAUDRATE = 115200
 endif 
 
 #using XON/XOFF flow control
