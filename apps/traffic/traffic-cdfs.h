@@ -25,6 +25,7 @@
 #ifndef __TRAFFIC_CDF_H__
 #define __TRAFFIC_CDF_H__
 
+<<<<<<< HEAD
 #define DELTA delta_cdf
 #define UNIFORM uniform_cdf
 #define STDNORMAL normal_cdf
@@ -38,6 +39,12 @@
 #if TRAFFIC_CDF==GPARETO
   #undef TRAFFIC_CDF_SIZE
   #define TRAFFIC_CDF_SIZE 21
+=======
+#if TRAFFIC_CDF == STDNORMAL
+#define TRAFFIC_CDF_SIZE 101
+#ifndef TRAFFIC_CDF_SHRINK_FACTOR
+#define TRAFFIC_CDF_SHRINK_FACTOR 5
+>>>>>>> parent of f2e01ac... fixed bug. it was generating packets 1 per second regardless of the shrink factor.
 #endif
 
 #if TRAFFIC_CDF==UNIFORM

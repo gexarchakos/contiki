@@ -61,7 +61,7 @@ set_prefix_64(uip_ipaddr_t *prefix_64)
 
 PROCESS_THREAD(border_router_process, ev, data)
 {
-//  static struct etimer et;
+  static struct etimer et;
 
   PROCESS_BEGIN();
 
@@ -77,15 +77,13 @@ PROCESS_THREAD(border_router_process, ev, data)
   PRINTF("RPL-Border router started\n");
 
   /* Request prefix until it has been received */
-//  while(!prefix_set) {
-//    etimer_set(&et, CLOCK_SECOND);
-//    request_prefix();
-//    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-//    PRINTF("Waiting for prefix\n");
-//  }
+  while(!prefix_set) {
+    etimer_set(&et, CLOCK_SECOND);
+    request_prefix();
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    PRINTF("Waiting for prefix\n");
+  }
 
-  prefix_set = 1;
-  uip_ip6addr(&prefix, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
   PRINTF("Obtained prefix: ");
   uip_debug_ipaddr_print(&prefix);
   PRINTF("\n");

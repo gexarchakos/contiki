@@ -39,8 +39,8 @@
 #include "traffic.h"
 #include "traffic-cdfs.h"
 
-#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
+#define DEBUG DEBUG_FULL
 
 #if defined TRAFFIC_TRANSMIT_PAYLOAD && defined TRAFFIC_DESTINATIONS && TRAFFIC_DESTINATIONS_COUNT
 static int total_time = 0;
@@ -49,16 +49,19 @@ static unsigned int interval = 0;
 static unsigned int
 udp_interval(const int* cdf, int size)
 {
+<<<<<<< HEAD
 	printf("size=%d\n",size);
   unsigned int tmp = random_rand()*65535/RANDOM_RAND_MAX;
+=======
+  unsigned int tmp = random_rand();
+>>>>>>> parent of f2e01ac... fixed bug. it was generating packets 1 per second regardless of the shrink factor.
   int i = 0;
   for(i=0; i<size; i++)
   {
-    if(tmp<=cdf[i]) {
-      return i*65535/size;
-    }
+    if(tmp<=cdf[i])
+      return i;
   }
-  return (unsigned int)65535;
+  return (unsigned int)65536;
 }
 
 #endif
@@ -189,15 +192,14 @@ PROCESS(traffic_process, "Traffic Generator process");
 
 PROCESS_THREAD(traffic_process, ev, data)
 {
-
+  PROCESS_BEGIN();
+  printf("TRAFFIC: process started\n");
 #ifndef TRAFFIC_CDF
+  PROCESS_END();
+  printf("TRAFFIC: process ended\n");
 }
 #else
-
-  PROCESS_BEGIN();
-
-  printf("TRAFFIC: process started\n");
-
+  
   /* Listen to any host */
   udp_conn = udp_new(NULL, 0, NULL);
   udp_bind(udp_conn, UIP_HTONS(TRAFFIC_PORT));
@@ -206,10 +208,13 @@ PROCESS_THREAD(traffic_process, ev, data)
 #if defined TRAFFIC_TRANSMIT_PAYLOAD && defined TRAFFIC_DESTINATIONS && TRAFFIC_DESTINATIONS_COUNT
   static struct etimer et;
   interval = udp_interval(TRAFFIC_CDF, TRAFFIC_CDF_SIZE);
+<<<<<<< HEAD
 
 #ifdef TRAFFIC_CDF_SHIFT_FACTOR
   interval = interval + TRAFFIC_CDF_SHIFT_FACTOR;
 #endif
+=======
+>>>>>>> parent of f2e01ac... fixed bug. it was generating packets 1 per second regardless of the shrink factor.
 #ifdef TRAFFIC_CDF_SHRINK_FACTOR
   interval = interval >> TRAFFIC_CDF_SHRINK_FACTOR;
 #endif
@@ -257,10 +262,13 @@ PROCESS_THREAD(traffic_process, ev, data)
 		uip_udp_packet_sendto(udp_conn, buffer, siz, &destination, UIP_HTONS(TRAFFIC_PORT));
       }
       interval = udp_interval(TRAFFIC_CDF, TRAFFIC_CDF_SIZE);
+<<<<<<< HEAD
 
 #ifdef TRAFFIC_CDF_SHIFT_FACTOR
   interval = interval + TRAFFIC_CDF_SHIFT_FACTOR;
 #endif
+=======
+>>>>>>> parent of f2e01ac... fixed bug. it was generating packets 1 per second regardless of the shrink factor.
 #ifdef TRAFFIC_CDF_SHRINK_FACTOR
       interval = interval >> TRAFFIC_CDF_SHRINK_FACTOR;
 #endif

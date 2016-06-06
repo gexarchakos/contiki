@@ -80,7 +80,7 @@
 /* Radio */
 
 #undef ENABLE_COOJA_DEBUG
-#define ENABLE_COOJA_DEBUG 1
+#define ENABLE_COOJA_DEBUG 0
 
 /* max 3, min 0 */
 

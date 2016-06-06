@@ -27,9 +27,12 @@
 
 #include "../common-conf.h"
 
+<<<<<<< HEAD
 #define TRAFFIC_CDF STDNORMAL
 #define TRAFFIC_CDF_SHRINK_FACTOR 10
 
+=======
+>>>>>>> parent of f2e01ac... fixed bug. it was generating packets 1 per second regardless of the shrink factor.
 #define TRAFFIC_DESTINATIONS sinks
 #define TRAFFIC_DESTINATIONS_COUNT 1
 
