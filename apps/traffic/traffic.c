@@ -49,6 +49,7 @@ static unsigned int interval = 0;
 static unsigned int
 udp_interval(const int* cdf, int size)
 {
+	printf("size=%d\n",size);
   unsigned int tmp = random_rand()*65535/RANDOM_RAND_MAX;
   int i = 0;
   for(i=0; i<size; i++)
