@@ -20,7 +20,7 @@ endif
 
 include $(CONTIKI)/Makefile.include
 
-ifeq($(TARGET),jn516x)
+ifeq ($(TARGET),jn516x)
  BAUDRATE = 1000000
 else
  BAUDRATE = 115200

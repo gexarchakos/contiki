@@ -25,34 +25,29 @@
 #ifndef __TRAFFIC_CDF_H__
 #define __TRAFFIC_CDF_H__
 
-<<<<<<< HEAD
-#define DELTA delta_cdf
-#define UNIFORM uniform_cdf
-#define STDNORMAL normal_cdf
-#define GPARETO gpareto_cdf
+#define DELTA 1
+#define UNIFORM 2
+#define STDNORMAL 3
+#define GPARETO 4
 
-#if TRAFFIC_CDF==STDNORMAL
+#if TRAFFIC==STDNORMAL
+  #undef TRAFFIC_CDF
+  #define TRAFFIC_CDF stdnormal_cdf
   #undef TRAFFIC_CDF_SIZE
   #define TRAFFIC_CDF_SIZE 101
-#endif
-
-#if TRAFFIC_CDF==GPARETO
+#elif TRAFFIC==GPARETO
+  #undef TRAFFIC_CDF
+  #define TRAFFIC_CDF gpareto_cdf
   #undef TRAFFIC_CDF_SIZE
   #define TRAFFIC_CDF_SIZE 21
-=======
-#if TRAFFIC_CDF == STDNORMAL
-#define TRAFFIC_CDF_SIZE 101
-#ifndef TRAFFIC_CDF_SHRINK_FACTOR
-#define TRAFFIC_CDF_SHRINK_FACTOR 5
->>>>>>> parent of f2e01ac... fixed bug. it was generating packets 1 per second regardless of the shrink factor.
-#endif
-
-#if TRAFFIC_CDF==UNIFORM
+#elif TRAFFIC==UNIFORM
+  #undef TRAFFIC_CDF
+  #define TRAFFIC_CDF uniform_cdf
   #undef TRAFFIC_CDF_SIZE
   #define TRAFFIC_CDF_SIZE 100
-#endif
-
-#if TRAFFIC_CDF==DELTA
+#elif TRAFFIC==DELTA
+  #undef TRAFFIC_CDF
+  #define TRAFFIC_CDF delta_cdf
   #undef TRAFFIC_CDF_SIZE
   #define TRAFFIC_CDF_SIZE 3
   #ifndef TRAFFIC_CDF_DELTA_PULSE
@@ -70,7 +65,7 @@ static const int delta_cdf [3] = {
   65535
 };
 
-static const int normal_cdf [101] = {
+static const int stdnormal_cdf [101] = {
   2,
   3,
   4,
