@@ -26,7 +26,7 @@ to this node.
   * the size of each CDF array
 * `traffic-conf.h`: The parameters of the traffic generator. Parameters include:
   * the UDP port for that service (defaults to `9011`),
-  * the CDF of choice (e.g. uniform, normal or pareto),
+  * the CDF of choice (e.g. fixed, uniform, normal or pareto),
   * Optional definition of the `TRAFFIC_TRANSMIT_PAYLOAD` macro for customizing the outgoing UDP payload. It defaults to `traffic_transmit_hello` declared in `traffic.h`.
   * Optional definition of the `TRAFFIC_RECEIVE_CALLBACK` macro for custom processing of incoming UDP packets. No definition is given for this macro.
 
@@ -37,17 +37,17 @@ The following are basic indicative steps. If you know what you are doing, of cou
 Minimum usage pattern uses the default port, the normal cdf, the `hello` payload for all outgoing packets and no processing of the incoming packets. To start generating traffic follow the steps:
 
 1. Define the name of the array with your destinations in any header file e.g. `project-conf.h` file of your project:
-```
+```C
 #define TRAFFIC_DESTINATIONS sinks
 ```
 
 2. Define the number of your destinations in the same header file e.g. `project-conf.h` file of your project:
-```
+```C
 #define TRAFFIC_DESTINATIONS_COUNT 1
 ```
 
 3. Define the array of destinations in a `.c` or `.h` file of your project:
-```
+```C
 static const char *sinks[TRAFFIC_DESTINATIONS_COUNT] = {
   "c30c:0:0:1"
 };
@@ -56,22 +56,22 @@ static const char *sinks[TRAFFIC_DESTINATIONS_COUNT] = {
 > That is, a special type node may also configured not to send traffic but only to receive. This is achieved by simply not defining such array of destinations. See also the [examples/traffic](https://github.com/gexarchakos/contiki/blob/traffic/examples/traffic/README.md)
 
 4. Add to your makefile the app by inserting the line:
-```
+```Make
 APPS+=traffic
 ```
 
 5. Include `traffic.h` in your `.c` file that contains your `PROCESS_THREAD`, i.e.
-```
+```C
 #include "traffic.h"
 ```
 
 6. Start the traffic generation e.g. in your `PROCESS_THREAD` with:
-```
+```C
 traffic_init();
 ```
 
 7. Stop the traffic generation e.g. at the end of your `PROCESS_THREAD` with:
-```
+```C
 traffic_end();
 ```
 
@@ -85,7 +85,7 @@ int my_awesome_payload(char* buffer, int max);
 ```
 
 9. Implement your callback in any file of your choice e.g. `node.c`. Note the signature which can also be found in `traffic.h`. Make sure the header file is `#include`d in the `node.c`. An example:
-```
+```C
 ...
 #include "project-conf.h"
 ...
@@ -105,13 +105,13 @@ my_awesome_payload(char* buffer, int max) {
 Redefine the `TRAFFIC_RECEIVE_CALLBACK` macro with your own callback:
 
 10. In one of your project's header file e.g. `project-conf.h` define the macro and declare the signature of your callback. You may see the signature also in `traffic.h`:
-```
+```C
 #define TRAFFIC_RECEIVE_CALLBACK received_awesome_payload
 void received_awesome_payload(uip_ipaddr_t *srcaddr, uint16_t srcport, char* payload);
 ```
 
 11. Implement your callback in any file of your choice e.g. `border-router.c`.Make sure the header file is `#include`d in the `border-router.c`. An example:
-```
+```C
 ...
 #include "project-conf.h"
 ...
@@ -122,13 +122,20 @@ received_awesome_payload(uip_ipaddr_t *srcaddr, uint16_t srcport, char* payload)
 ```
 
 ### Select CDF for intervals
-For the moment there are only three available PDFs in `traffic-cdfs.h`: normal (default), uniform and  pareto distributions. To select one of the three distributions do the following:
+For the moment there are only four available PDFs in `traffic-cdfs.h`: delta(constant), normal (default), uniform and  pareto distributions. To select one of the three distributions do the following:
 
 12. In your project's header file e.g. `project-conf.h` define the selected CDF. The CDFs are represented as arrays of values from 0 to 65535. As these represent seconds, it is most likely that one would like to restrict the maximum value to something smaller. This is done by right shifting the randomly chosen value by a number of bit positions. This number is the `TRAFFIC_CDF_SHRINK_FACTOR`.
-```
-#define TRAFFIC_CDF STDNORMAL //or UNIFORM or PARETO
+```C
+#define TRAFFIC STDNORMAL //or UNIFORM or PARETO
 #define TRAFFIC_CDF_SHRINK_FACTOR 5 //now returned intervals will be between 0 and 2048 seconds
 ```
+Note that especially for the delta distribution, an extra parameter is available `TRAFFIC_CDF_DELTA_PULSE`. That is the constant delay in number of seconds. Delta distribution triggers the packet generator at fixed intervals. Its configuration is also in e.g. `project-conf.h` as follows:
+```C
+#define TRAFFIC DELTA
+#define TRAFFIC_CDF_DELTA_PULSE 30 // transmit a packet every 30 seconds
+#define TRAFFIC_CDF_SHRINK_FACTOR 5 // optional, now returned intervals will be between 0 and 2048 seconds
+```
+Use `TRAFFIC_CDF_SHRINK_FACTOR` with caution as very low numbers will be suppressed and the interval will be practically `0`.
 
 ### Other customizations
 
