@@ -26,7 +26,7 @@ to this node.
   * the size of each CDF array
 * `traffic-conf.h`: The parameters of the traffic generator. Parameters include:
   * the UDP port for that service (defaults to `9011`),
-  * the CDF of choice (e.g. pareto or normal),
+  * the CDF of choice (e.g. uniform, normal or pareto),
   * Optional definition of the `TRAFFIC_TRANSMIT_PAYLOAD` macro for customizing the outgoing UDP payload. It defaults to `traffic_transmit_hello` declared in `traffic.h`.
   * Optional definition of the `TRAFFIC_RECEIVE_CALLBACK` macro for custom processing of incoming UDP packets. No definition is given for this macro.
 
@@ -34,7 +34,7 @@ to this node.
 The following are basic indicative steps. If you know what you are doing, of course, you may give different structure to your code. The first six steps are necessary and the following are optional.
 
 ### Minimum configuration
-Minimum usage pattern uses the default port, the pareto cdf, the `hello` payload for all outgoing packets and no processing of the incoming packets. To start generating traffic follow the steps:
+Minimum usage pattern uses the default port, the normal cdf, the `hello` payload for all outgoing packets and no processing of the incoming packets. To start generating traffic follow the steps:
 
 1. Define the name of the array with your destinations in any header file e.g. `project-conf.h` file of your project:
 ```
@@ -122,11 +122,11 @@ received_awesome_payload(uip_ipaddr_t *srcaddr, uint16_t srcport, char* payload)
 ```
 
 ### Select CDF for intervals
-For the moment there are only two available PDFs in `traffic-cdfs.h`: pareto (default) and normal distributions. To select one of the two distributions do the following:
+For the moment there are only three available PDFs in `traffic-cdfs.h`: normal (default), uniform and  pareto distributions. To select one of the three distributions do the following:
 
-12. In your project's header file e.g. `project-conf.h` define the selected CDF. The CDFs are represented as arrays of values from 0 to 65536. As these represent seconds, it is most likely that one would like to restrict the maximum value to something smaller. This is done by right shifting the randomly chosen value by a number of bit positions. This number is the `TRAFFIC_CDF_SHRINK_FACTOR`.
+12. In your project's header file e.g. `project-conf.h` define the selected CDF. The CDFs are represented as arrays of values from 0 to 65535. As these represent seconds, it is most likely that one would like to restrict the maximum value to something smaller. This is done by right shifting the randomly chosen value by a number of bit positions. This number is the `TRAFFIC_CDF_SHRINK_FACTOR`.
 ```
-#define TRAFFIC_CDF STDNORMAL //or PARETO
+#define TRAFFIC_CDF STDNORMAL //or UNIFORM or PARETO
 #define TRAFFIC_CDF_SHRINK_FACTOR 5 //now returned intervals will be between 0 and 2048 seconds
 ```
 

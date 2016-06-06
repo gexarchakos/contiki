@@ -206,9 +206,13 @@ PROCESS_THREAD(traffic_process, ev, data)
   static struct etimer et;
   interval = udp_interval(TRAFFIC_CDF, TRAFFIC_CDF_SIZE);
 
+#ifdef TRAFFIC_CDF_SHIFT_FACTOR
+  interval = interval + TRAFFIC_CDF_SHIFT_FACTOR;
+#endif
 #ifdef TRAFFIC_CDF_SHRINK_FACTOR
   interval = interval >> TRAFFIC_CDF_SHRINK_FACTOR;
 #endif
+
   etimer_set(&et, interval*CLOCK_SECOND);
 #endif
   while(1) {
@@ -253,6 +257,9 @@ PROCESS_THREAD(traffic_process, ev, data)
       }
       interval = udp_interval(TRAFFIC_CDF, TRAFFIC_CDF_SIZE);
 
+#ifdef TRAFFIC_CDF_SHIFT_FACTOR
+  interval = interval + TRAFFIC_CDF_SHIFT_FACTOR;
+#endif
 #ifdef TRAFFIC_CDF_SHRINK_FACTOR
       interval = interval >> TRAFFIC_CDF_SHRINK_FACTOR;
 #endif

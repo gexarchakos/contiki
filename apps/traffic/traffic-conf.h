@@ -33,8 +33,8 @@
 #define TRAFFIC_TRANSMIT_PAYLOAD traffic_transmit_hello
 #endif
 
-#ifndef TRAFFIC_CDF
-#define TRAFFIC_CDF STDNORMAL
-#endif
+//#ifndef TRAFFIC_CDF
+//#define TRAFFIC_CDF STDNORMAL
+//#endif
 
 #endif

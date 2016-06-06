@@ -27,6 +27,7 @@
 
 #include "../common-conf.h"
 
+#define TRAFFIC_CDF STDNORMAL
 #define TRAFFIC_CDF_SHRINK_FACTOR 10
 
 #define TRAFFIC_DESTINATIONS sinks
