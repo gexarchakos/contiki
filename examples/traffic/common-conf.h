@@ -85,7 +85,7 @@
 
 /* Contiki netstack: RDC */
 #undef NETSTACK_CONF_RDC
-#define NETSTACK_CONF_RDC     nullrdc_driver
+#define NETSTACK_CONF_RDC     contikimac_driver
 
 #undef RF_CHANNEL
 #define RF_CHANNEL 26
