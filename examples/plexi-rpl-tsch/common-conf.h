@@ -57,7 +57,7 @@
 #define TSCH_CONF_JOIN_MY_PANID_ONLY 1
 
 #undef TSCH_CONF_AUTOSTART
-#define TSCH_CONF_AUTOSTART 0
+#define TSCH_CONF_AUTOSTART 1
 
 #define RPL_CALLBACK_PARENT_SWITCH tsch_rpl_callback_parent_switch
 #define RPL_CALLBACK_NEW_DIO_INTERVAL tsch_rpl_callback_new_dio_interval
@@ -229,16 +229,12 @@
 #undef CONTIKI_VERSION_STRING
 #define CONTIKI_VERSION_STRING "Contiki 3.0-PLEXI"
 
-#if CONTIKI_TARGET_SKY || CONTIKI_TARGET_Z1
-
-#include "common-conf-sky-z1.h"
-
-#endif /* CONTIKI_TARGET_SKY || CONTIKI_TARGET_Z1 */
+#if CONTIKI_TARGET_Z1
+#include "common-conf-z1.h"
+#endif /* CONTIKI_TARGET_Z1 */
 
 #if CONTIKI_TARGET_JN516X
-
 #include "common-conf-jn516x.h"
-
 #endif /* CONTIKI_TARGET_JN516X */
 
 #endif /* __COMMON_CONF_H__ */

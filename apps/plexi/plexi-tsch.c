@@ -495,6 +495,7 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
       query_frame_len = REST.get_query_variable(request, FRAME_ID_LABEL, (const char **)(&query_frame));
       query_slot_len = REST.get_query_variable(request, LINK_SLOT_LABEL, (const char **)(&query_slot));
       query_channel_len = REST.get_query_variable(request, LINK_CHANNEL_LABEL, (const char **)(&query_channel));
+      
       if(query_id) {
         *(query_id + query_id_len) = '\0';
         id = (unsigned)strtoul(query_id, &end, 10);
@@ -520,7 +521,7 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
         coap_set_payload(response, "Supports queries only on slot frame id and/or slotoffset and channeloffset", 74);
         return;
       }
-
+      
       /* Parse subresources and make sure you can filter the results */
       uri_subresource = uri_path + base_len;
       if(*uri_subresource == '/') {
@@ -632,6 +633,7 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
     return;
   }
 }
+
 static void
 plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {

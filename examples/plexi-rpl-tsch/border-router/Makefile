@@ -1,7 +1,7 @@
 CONTIKI_PROJECT = border-router
 all: $(CONTIKI_PROJECT) 
 
-TARGET ?= jn516x
+TARGET ?= z1
 
 CONTIKI=../../..
 

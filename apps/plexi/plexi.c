@@ -96,7 +96,7 @@ plexi_init()
 #endif
 
 #if PLEXI_WITH_LINK_STATISTICS
-  //plexi_link_statistics_init(); /* initialize plexi-link-statistics module */
+  plexi_link_statistics_init(); /* initialize plexi-link-statistics module */
 #endif
 
 #if PLEXI_WITH_QUEUE_STATISTICS
