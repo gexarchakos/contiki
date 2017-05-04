@@ -963,7 +963,10 @@ plexi_set_statistics_window(plexi_stats *stats, uint16_t window)
 #endif
 }
 uint8_t
-plexi_execute_over_link_stats(void (*callback)(uint16_t, uint8_t, plexi_stats_value_st), struct tsch_link *link, linkaddr_t *target)
+plexi_execute_over_link_stats( \
+      void (*callback)(uint16_t, uint8_t, plexi_stats_value_st, uint8_t*, size_t*, uint16_t, size_t*, int32_t*), \
+      struct tsch_link *link, \
+      linkaddr_t *target)
 {
   plexi_stats_value_st value = -1;
   if(memb_inmemb(&plexi_stats_mem, link->data)) {

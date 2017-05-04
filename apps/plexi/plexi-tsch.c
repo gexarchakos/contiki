@@ -77,7 +77,7 @@
  *
  * \sa apps/rest-engine/rest-engine.h for more information on the handler signatures
  */
-static void plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset);
 
 /**
  * \brief Installs a new TSCH slotframe upon a CoAP POST request and returns a success/failure flag.
@@ -92,7 +92,7 @@ static void plexi_get_slotframe_handler(void *request, void *response, uint8_t *
  *
  * \sa apps/rest-engine/rest-engine.h for more information on the handler signatures
  */
-static void plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset);
 
 /** \brief Deletes an existing slotframe upon a CoAP DEL request and returns the deleted objects.
  *
@@ -112,7 +112,7 @@ static void plexi_post_slotframe_handler(void *request, void *response, uint8_t 
  *
  * \sa apps/rest-engine/rest-engine.h for more information on the handler signatures
  */
-static void plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset);
 
 /*---------------------------------------------------------------------------*/
 
@@ -142,7 +142,7 @@ static void plexi_delete_slotframe_handler(void *request, void *response, uint8_
  *
  * \sa apps/rest-engine/rest-engine.h for more information on the handler signatures
  */
-static void plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset);
 /** \brief Deletes an existing link upon a CoAP DEL request and returns the deleted objects.
  *
  * Handler to request the deletion of all links or specific ones via a query:
@@ -166,7 +166,7 @@ static void plexi_get_links_handler(void *request, void *response, uint8_t *buff
  *
  * \sa apps/rest-engine/rest-engine.h for more information on the handler signatures
  */
-static void plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset);
 /**
  * \brief Installs a new TSCH link upon a CoAP POST request and returns the link identifier is successful.
  *
@@ -178,7 +178,7 @@ static void plexi_delete_links_handler(void *request, void *response, uint8_t *b
  *
  * \sa apps/rest-engine/rest-engine.h for more information on the handler signatures
  */
-static void plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
+static void plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset);
 
 /*---------------------------------------------------------------------------*/
 
@@ -212,20 +212,36 @@ static size_t inbox_post_link_len = 0;
 
 #if PLEXI_WITH_LINK_STATISTICS
 static uint8_t first_stat = 1;
-static void print_stats(uint16_t id, uint8_t metric, plexi_stats_value_st value);
+static void plexi_reply_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st value, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
 #endif
 
 static uint16_t new_tx_slotframe = 0;
 static uint16_t new_tx_timeslot = 0;
 
-static void
-plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+uint8_t
+plexi_reply_slotframe_if_possible(struct tsch_slotframe *slotframe, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
-  plexi_reply_content_len = 0;
+  return plexi_reply_string_if_possible("{\"", buffer, bufpos, bufsize, strpos, offset) &&
+      plexi_reply_string_if_possible(FRAME_ID_LABEL, buffer, bufpos, bufsize, strpos, offset) &&
+      plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset) &&
+      plexi_reply_uint_if_possible(slotframe->handle, buffer, bufpos, bufsize, strpos, offset) &&
+      plexi_reply_string_if_possible(",\"", buffer, bufpos, bufsize, strpos, offset) &&
+      plexi_reply_string_if_possible(FRAME_SLOTS_LABEL, buffer, bufpos, bufsize, strpos, offset) &&
+      plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset) &&
+      plexi_reply_uint_if_possible(slotframe->size.val, buffer, bufpos, bufsize, strpos, offset) &&
+      plexi_reply_char_if_possible('}', buffer, bufpos, bufsize, strpos, offset);
+}
+
+static void
+plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
+{
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
 
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
+    size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
+    size_t bufpos = 0;            /* position within buffer (bytes written) */
+    
     char *end;
     char *uri_path = NULL;
     const char *query = NULL;
@@ -257,33 +273,54 @@ plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint
     }
     /* iterate over all slotframes to pick the ones specified by the query */
     int item_counter = 0;
-    CONTENT_PRINTF("[");
+    plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
     struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(NULL);
     while(slotframe) {
       if(!query_value || (!strncmp(FRAME_ID_LABEL, query, sizeof(FRAME_ID_LABEL) - 1) && slotframe->handle == value) || \
          (!strncmp(FRAME_SLOTS_LABEL, query, sizeof(FRAME_SLOTS_LABEL) - 1) && slotframe->size.val == value)) {
         if(item_counter > 0) {
-          CONTENT_PRINTF(",");
+          plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
         } else if(query_value && uri_len == base_len && !strncmp(FRAME_ID_LABEL, query, sizeof(FRAME_ID_LABEL) - 1) && slotframe->handle == value) {
-          plexi_reply_content_len = 0;
+          bufpos = 0;
+          strpos = 0;
         }
         item_counter++;
         if(!strcmp(FRAME_ID_LABEL, uri_subresource)) {
-          CONTENT_PRINTF("%u", slotframe->handle);
+          plexi_reply_uint_if_possible(slotframe->handle, buffer, &bufpos, bufsize, &strpos, offset);
         } else if(!strcmp(FRAME_SLOTS_LABEL, uri_subresource)) {
-          CONTENT_PRINTF("%u", slotframe->size.val);
+          plexi_reply_uint_if_possible(slotframe->size.val, buffer, &bufpos, bufsize, &strpos, offset);
         } else {
-          CONTENT_PRINTF("{\"%s\":%u,\"%s\":%u}", FRAME_ID_LABEL, slotframe->handle, FRAME_SLOTS_LABEL, slotframe->size.val);
+          plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible(FRAME_ID_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_uint_if_possible(slotframe->handle, buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible(FRAME_SLOTS_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_uint_if_possible(slotframe->size.val, buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
         }
       }
       slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(slotframe);
     }
     if(!query || uri_len != base_len || strncmp(FRAME_ID_LABEL, query, sizeof(FRAME_ID_LABEL) - 1)) {
-      CONTENT_PRINTF("]");
+      plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
     }
     if(item_counter > 0) {
-      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+      if(bufpos > 0) {
+        /* Build the header of the reply */
+        REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+        /* Build the payload of the reply */
+        REST.set_response_payload(response, buffer, bufpos);
+      } else if(strpos > 0) {
+        coap_set_status_code(response, BAD_OPTION_4_02);
+        coap_set_payload(response, "BlockOutOfScope", 15);
+      }
+      if(strpos <= *offset + bufsize) {
+        *offset = -1;
+      } else {
+        *offset += bufsize;
+      }
     } else { /* if no slotframes were found return a CoAP 404 error */
       coap_set_status_code(response, NOT_FOUND_4_04);
       coap_set_payload(response, "No slotframe was found", 22);
@@ -295,9 +332,8 @@ plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint
   }
 }
 static void
-plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
-  plexi_reply_content_len = 0;
   int state;
   int request_content_len;
   int first_item = 1;
@@ -312,6 +348,8 @@ plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uin
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
+    size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
+    size_t bufpos = 0;            /* position within buffer (bytes written) */
 
     request_content_len = REST.get_request_payload(request, &request_content);
 
@@ -319,7 +357,7 @@ plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uin
     jsonparse_setup(&js, (const char *)request_content, request_content_len);
 
     /* Start creating response */
-    CONTENT_PRINTF("[");
+    plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
 
     /* Parse json input */
     while((state = plexi_json_find_field(&js, field_buf, sizeof(field_buf)))) {
@@ -331,19 +369,17 @@ plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uin
       case '}': {   /* End of current element */
         struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_by_handle(fd);
         if(!first_item) {
-          CONTENT_PRINTF(",");
+          plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
         }
         first_item = 0;
         if(slotframe || fd < 0) {
-          printf("PLEXI:! could not add slotframe %u with length %u\n", fd, ns);
-          CONTENT_PRINTF("0");
+          plexi_reply_char_if_possible('0', buffer, &bufpos, bufsize, &strpos, offset);
         } else {
           if(tsch_schedule_add_slotframe(fd, ns)) {
             new_sf_count++;
-            printf("PLEXI: added slotframe %u with length %u\n", fd, ns);
-            CONTENT_PRINTF("1");
+            plexi_reply_char_if_possible('1', buffer, &bufpos, bufsize, &strpos, offset);
           } else {
-            CONTENT_PRINTF("0");
+            plexi_reply_char_if_possible('0', buffer, &bufpos, bufsize, &strpos, offset);
           }
         }
         break;
@@ -357,11 +393,23 @@ plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uin
         break;
       }
     }
-    CONTENT_PRINTF("]");
+    plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
     /* Check if json parsing succeeded */
     if(js.error == JSON_ERROR_OK) {
-      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+      if(bufpos > 0) {
+        /* Build the header of the reply */
+        REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+        /* Build the payload of the reply */
+        REST.set_response_payload(response, buffer, bufpos);
+      } else if(strpos > 0) {
+        coap_set_status_code(response, BAD_OPTION_4_02);
+        coap_set_payload(response, "BlockOutOfScope", 15);
+      }
+      if(strpos <= *offset + bufsize) {
+        *offset = -1;
+      } else {
+        *offset += bufsize;
+      }
     } else {
       coap_set_status_code(response, BAD_REQUEST_4_00);
       coap_set_payload(response, "Can only support JSON payload format", 36);
@@ -372,13 +420,15 @@ plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uin
   }
 }
 static void
-plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
-  plexi_reply_content_len = 0;
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
 
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
+    size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
+    size_t bufpos = 0;            /* position within buffer (bytes written) */
+
     char *end;
     char *uri_path = NULL;
     int uri_len = REST.get_url(request, (const char **)(&uri_path));
@@ -400,10 +450,29 @@ plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, u
       struct tsch_slotframe *sf = (struct tsch_slotframe *)tsch_schedule_get_slotframe_by_handle(id);
       if(sf && tsch_schedule_remove_slotframe(sf)) {
         int slots = sf->size.val;
-        printf("PLEXI: deleted slotframe {%s:%u, %s:%u}\n", FRAME_ID_LABEL, id, FRAME_SLOTS_LABEL, slots);
-        CONTENT_PRINTF("{\"%s\":%u, \"%s\":%u}", FRAME_ID_LABEL, id, FRAME_SLOTS_LABEL, slots);
-        REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-        REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+        plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
+        plexi_reply_string_if_possible(FRAME_ID_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+        plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+        plexi_reply_uint_if_possible(id, buffer, &bufpos, bufsize, &strpos, offset);
+        plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+        plexi_reply_string_if_possible(FRAME_SLOTS_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+        plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+        plexi_reply_uint_if_possible(slots, buffer, &bufpos, bufsize, &strpos, offset);
+        plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
+        if(bufpos > 0) {
+          /* Build the header of the reply */
+          REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+          /* Build the payload of the reply */
+          REST.set_response_payload(response, buffer, bufpos);
+        } else if(strpos > 0) {
+          coap_set_status_code(response, BAD_OPTION_4_02);
+          coap_set_payload(response, "BlockOutOfScope", 15);
+        }
+        if(strpos <= *offset + bufsize) {
+          *offset = -1;
+        } else {
+          *offset += bufsize;
+        }
       }
       coap_set_status_code(response, DELETED_2_02);
     } else if(!query) {
@@ -412,23 +481,42 @@ plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, u
       short int first_item = 1;
       while((sf = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(NULL))) {
         if(first_item) {
-          CONTENT_PRINTF("[");
+          plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
           first_item = 0;
         } else {
-          CONTENT_PRINTF(",");
+          plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
         }
         int slots = sf->size.val;
         int id = sf->handle;
         if(sf && tsch_schedule_remove_slotframe(sf)) {
-          printf("PLEXI: deleted slotframe {%s:%u, %s:%u}\n", FRAME_ID_LABEL, id, FRAME_SLOTS_LABEL, slots);
-          CONTENT_PRINTF("{\"%s\":%u, \"%s\":%u}", FRAME_ID_LABEL, id, FRAME_SLOTS_LABEL, slots);
+          plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible(FRAME_ID_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_uint_if_possible(id, buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible(FRAME_SLOTS_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_uint_if_possible(slots, buffer, &bufpos, bufsize, &strpos, offset);
+          plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
         }
       }
       if(!first_item) {
-        CONTENT_PRINTF("]");
+        plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
       }
-      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+      if(bufpos > 0) {
+        /* Build the header of the reply */
+        REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+        /* Build the payload of the reply */
+        REST.set_response_payload(response, buffer, bufpos);
+      } else if(strpos > 0) {
+        coap_set_status_code(response, BAD_OPTION_4_02);
+        coap_set_payload(response, "BlockOutOfScope", 15);
+      }
+      if(strpos <= *offset + bufsize) {
+        *offset = -1;
+      } else {
+        *offset += bufsize;
+      }
       coap_set_status_code(response, DELETED_2_02);
     } else if(query) {
       coap_set_status_code(response, NOT_IMPLEMENTED_5_01);
@@ -440,6 +528,7 @@ plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, u
     return;
   }
 }
+
 /*---------------------------------------------------------------------------*/
 
 /**
@@ -467,14 +556,46 @@ PARENT_RESOURCE(resource_6top_links,    /* name */
                 NULL,   /* PUT handler */
                 plexi_delete_links_handler); /* DELETE handler */
 
-static void
-plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+uint8_t
+plexi_reply_link_if_possible(struct tsch_link *link, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
-  plexi_reply_content_len = 0;
+  return plexi_reply_char_if_possible('"', buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(LINK_ID_LABEL, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_uint_if_possible(link->handle, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(",\"", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(FRAME_ID_LABEL, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_uint_if_possible(link->slotframe_handle, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(",\"", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(LINK_SLOT_LABEL, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_uint_if_possible(link->timeslot, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(",\"", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(LINK_CHANNEL_LABEL, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_uint_if_possible(link->channel_offset, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(",\"", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(LINK_OPTION_LABEL, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_uint_if_possible(link->link_options, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(",\"", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible(LINK_TYPE_LABEL, buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset) &&
+                plexi_reply_uint_if_possible(link->link_type, buffer, bufpos, bufsize, strpos, offset);
+}
+
+static void
+plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
+{
+//  plexi_reply_content_len = 0;
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
 
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
+    size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
+    size_t bufpos = 0;            /* position within buffer (bytes written) */
+
     char *end;
 
     char *uri_path = NULL;
@@ -540,6 +661,7 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
       uri_len = (int)(base_len + 1 + strlen(LINK_STATS_LABEL));
       uri_subresource = LINK_STATS_LABEL;
     }
+    printf("#### offset=%d\n",*offset);
     struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(NULL);
     int first_item = 1;
     while(slotframe) {
@@ -550,29 +672,40 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
             if(!(flag & 8) || id == link->handle) {
               if(first_item) {
                 if(flag < 7 || uri_len > base_len + 1) {
-                  CONTENT_PRINTF("[");
+                  plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF("[");
                 }
                 first_item = 0;
               } else {
-                CONTENT_PRINTF(",");
+                plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF(",");
               }
               if(!strcmp(LINK_ID_LABEL, uri_subresource)) {
-                CONTENT_PRINTF("%u", link->handle);
+                plexi_reply_uint_if_possible(link->handle, buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF("%u", link->handle);
               } else if(!strcmp(FRAME_ID_LABEL, uri_subresource)) {
-                CONTENT_PRINTF("%u", link->slotframe_handle);
+                plexi_reply_uint_if_possible(link->slotframe_handle, buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF("%u", link->slotframe_handle);
               } else if(!strcmp(LINK_SLOT_LABEL, uri_subresource)) {
-                CONTENT_PRINTF("%u", link->timeslot);
+                plexi_reply_uint_if_possible(link->timeslot, buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF("%u", link->timeslot);
               } else if(!strcmp(LINK_CHANNEL_LABEL, uri_subresource)) {
-                CONTENT_PRINTF("%u", link->channel_offset);
+                plexi_reply_uint_if_possible(link->channel_offset, buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF("%u", link->channel_offset);
               } else if(!strcmp(LINK_OPTION_LABEL, uri_subresource)) {
-                CONTENT_PRINTF("%u", link->link_options);
+                plexi_reply_uint_if_possible(link->link_options, buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF("%u", link->link_options);
               } else if(!strcmp(LINK_TYPE_LABEL, uri_subresource)) {
-                CONTENT_PRINTF("%u", link->link_type);
+                plexi_reply_uint_if_possible(link->link_type, buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF("%u", link->link_type);
               } else if(!strcmp(NEIGHBORS_TNA_LABEL, uri_subresource)) {
                 if(!linkaddr_cmp(&link->addr, &linkaddr_null)) {
                   char na[32];
                   plexi_linkaddr_to_eui64(na, &link->addr);
-                  CONTENT_PRINTF("\"%s\"", na);
+                  plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
+                  plexi_reply_string_if_possible(na, buffer, &bufpos, bufsize, &strpos, offset);
+                  plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
+//                  CONTENT_PRINTF("\"%s\"", na);
                 } else {
                   coap_set_status_code(response, NOT_FOUND_4_04);
                   coap_set_payload(response, "Link has no target node address.", 32);
@@ -581,7 +714,7 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
               } else if(!strcmp(LINK_STATS_LABEL, uri_subresource)) {
 #if PLEXI_WITH_LINK_STATISTICS
                 first_stat = 1;
-                if(!plexi_execute_over_link_stats(print_stats, link, NULL)) {
+                if(!plexi_execute_over_link_stats(plexi_reply_stats_if_possible, link, NULL)) {
 #endif
                 coap_set_status_code(response, NOT_FOUND_4_04);
                 coap_set_payload(response, "No specified statistics was found", 33);
@@ -590,25 +723,41 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
               }
 #endif
               } else {
-                CONTENT_PRINTF("{\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u", \
-                               LINK_ID_LABEL, link->handle, FRAME_ID_LABEL, link->slotframe_handle, \
-                               LINK_SLOT_LABEL, link->timeslot, LINK_CHANNEL_LABEL, link->channel_offset, \
-                               LINK_OPTION_LABEL, link->link_options, LINK_TYPE_LABEL, link->link_type);
+                plexi_reply_char_if_possible('{', buffer, &bufpos, bufsize, &strpos, offset);
+                //plexi_reply_link_if_possible(link, buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_string_if_possible(LINK_ID_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_uint_if_possible(link->handle, buffer, &bufpos, bufsize, &strpos, offset);
                 if(!linkaddr_cmp(&link->addr, &linkaddr_null)) {
                   char na[32];
                   plexi_linkaddr_to_eui64(na, &link->addr);
-                  CONTENT_PRINTF(",\"%s\":\"%s\"", NEIGHBORS_TNA_LABEL, na);
+                  plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+                  plexi_reply_string_if_possible(NEIGHBORS_TNA_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+                  plexi_reply_string_if_possible("\":\"", buffer, &bufpos, bufsize, &strpos, offset);
+                  plexi_reply_string_if_possible(na, buffer, &bufpos, bufsize, &strpos, offset);
+                  plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
+//                  CONTENT_PRINTF(",\"%s\":\"%s\"", NEIGHBORS_TNA_LABEL, na);
                 }
 #if PLEXI_WITH_LINK_STATISTICS
-                CONTENT_PRINTF(",\"%s\":[", LINK_STATS_LABEL);
+                int undo_bufpos = bufpos;
+                int undo_strpos = strpos;
+                plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_string_if_possible(LINK_STATS_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_string_if_possible("\":[", buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF(",\"%s\":[", LINK_STATS_LABEL);
                 first_stat = 1;
-                if(plexi_execute_over_link_stats(print_stats, link, NULL)) {
-                  CONTENT_PRINTF("]");
+                if(plexi_execute_over_link_stats(plexi_reply_stats_if_possible, link, NULL)) {
+                  plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
+//                  CONTENT_PRINTF("]");
                 } else {
-                  plexi_reply_content_len -= sizeof(LINK_STATS_LABEL)+4;
+//                  plexi_reply_content_len -= sizeof(LINK_STATS_LABEL)+4;
+                  bufpos = undo_bufpos;
+                  strpos = undo_strpos;
                 }
 #endif
-                CONTENT_PRINTF("}");
+                plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF("}");
               }
             }
           }
@@ -618,11 +767,28 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
       slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(slotframe);
     }
     if(flag < 7 || uri_len > base_len + 1) {
-      CONTENT_PRINTF("]");
+      plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
+//      CONTENT_PRINTF("]");
     }
     if(!first_item) {
-      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+      if(bufpos > 0) {
+        /* Build the header of the reply */
+        REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+        /* Build the payload of the reply */
+        REST.set_response_payload(response, buffer, bufpos);
+      } else if(strpos > 0) {
+        coap_set_status_code(response, BAD_OPTION_4_02);
+        coap_set_payload(response, "BlockOutOfScope", 15);
+      }
+      if(strpos <= *offset + bufsize) {
+        *offset = -1;
+      } else {
+        *offset += bufsize;
+      }
+
+//      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+//      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+//      REST.set_response_payload(response, buffer, bufpos);
     } else {
       coap_set_status_code(response, NOT_FOUND_4_04);
       coap_set_payload(response, "No specified statistics resource not found", 42);
@@ -635,13 +801,16 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
 }
 
 static void
-plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
-  plexi_reply_content_len = 0;
+//  plexi_reply_content_len = 0;
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
 
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
+    size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
+    size_t bufpos = 0;            /* position within buffer (bytes written) */
+
     char *end;
 
     char *uri_path = NULL;
@@ -709,23 +878,56 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
             if(((!(flags & 2) && !(flags & 1)) || ((flags & 2) && !(flags & 1) && slot == link_timeslot) || (!(flags & 2) && (flags & 1) && channel == link_channel_offset) || ((flags & 2) && (flags & 1) && slot == link_timeslot && channel == link_channel_offset)) && deleted) {
               if(first_item) {
                 if(flags < 7) {
-                  CONTENT_PRINTF("[");
+                  plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);    
+//                  CONTENT_PRINTF("[");
                 }
                 first_item = 0;
               } else {
-                CONTENT_PRINTF(",");
+                plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);    
+//                CONTENT_PRINTF(",");
               }
-              printf("PLEXI: deleted link {\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u}", \
-                     LINK_ID_LABEL, link_handle, FRAME_ID_LABEL, link_slotframe_handle, LINK_SLOT_LABEL, link_timeslot, \
-                     LINK_CHANNEL_LABEL, link_channel_offset, LINK_OPTION_LABEL, link_link_options, LINK_TYPE_LABEL, link_link_type);
-              CONTENT_PRINTF("{\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u", \
-                             LINK_ID_LABEL, link_handle, FRAME_ID_LABEL, link_slotframe_handle, \
-                             LINK_SLOT_LABEL, link_timeslot, LINK_CHANNEL_LABEL, link_channel_offset, \
-                             LINK_OPTION_LABEL, link_link_options, LINK_TYPE_LABEL, link_link_type);
+//              printf("PLEXI: deleted link {\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u}", \
+//                     LINK_ID_LABEL, link_handle, FRAME_ID_LABEL, link_slotframe_handle, LINK_SLOT_LABEL, link_timeslot, \
+//                     LINK_CHANNEL_LABEL, link_channel_offset, LINK_OPTION_LABEL, link_link_options, LINK_TYPE_LABEL, link_link_type);
+              plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(LINK_ID_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_uint_if_possible(link_handle, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(FRAME_ID_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_uint_if_possible(link_slotframe_handle, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(LINK_SLOT_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_uint_if_possible(link_timeslot, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(LINK_CHANNEL_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_uint_if_possible(link_channel_offset, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(LINK_OPTION_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_uint_if_possible(link_link_options, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible(LINK_TYPE_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_uint_if_possible(link_link_type, buffer, &bufpos, bufsize, &strpos, offset);
+//              CONTENT_PRINTF("{\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u", \
+//                             LINK_ID_LABEL, link_handle, FRAME_ID_LABEL, link_slotframe_handle, \
+//                             LINK_SLOT_LABEL, link_timeslot, LINK_CHANNEL_LABEL, link_channel_offset, \
+//                             LINK_OPTION_LABEL, link_link_options, LINK_TYPE_LABEL, link_link_type);
               if(strlen(na) > 0) {
-                CONTENT_PRINTF(",\"%s\":\"%s\"", NEIGHBORS_TNA_LABEL, na);
+                plexi_linkaddr_to_eui64(na, &link->addr);
+                plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_string_if_possible(NEIGHBORS_TNA_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_string_if_possible("\":\"", buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_string_if_possible(na, buffer, &bufpos, bufsize, &strpos, offset);
+                plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
+//                CONTENT_PRINTF(",\"%s\":\"%s\"", NEIGHBORS_TNA_LABEL, na);
               }
-              CONTENT_PRINTF("}");
+              plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
+//              CONTENT_PRINTF("}");
             }
           }
           link = next_link;
@@ -734,11 +936,25 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
       slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(slotframe);
     }
     if(flags < 7) {
-      CONTENT_PRINTF("]");
+      plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
+//      CONTENT_PRINTF("]");
     }
     REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
     if(flags != 7 || !first_item) {
-      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+      if(bufpos > 0) {
+        /* Build the payload of the reply */
+        REST.set_response_payload(response, buffer, bufpos);
+      } else if(strpos > 0) {
+        coap_set_status_code(response, BAD_OPTION_4_02);
+        coap_set_payload(response, "BlockOutOfScope", 15);
+      }
+      if(strpos <= *offset + bufsize) {
+        *offset = -1;
+      } else {
+        *offset += bufsize;
+      }
+//      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+//      REST.set_response_payload(response, buffer, bufpos);
     }
     coap_set_status_code(response, DELETED_2_02);
   } else {
@@ -747,18 +963,21 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
   }
 }
 static void
-plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
+plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
   if(inbox_post_link_lock == PLEXI_REQUEST_CONTENT_UNLOCKED) {
     inbox_post_link_len = 0;
     *inbox_post_link = '\0';
   }
-  plexi_reply_content_len = 0;
+//  plexi_reply_content_len = 0;
   int first_item = 1;
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
 
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
+    size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
+    size_t bufpos = 0;            /* position within buffer (bytes written) */
+
     const uint8_t *request_content;
     int request_content_len;
     request_content_len = coap_get_payload(request, &request_content);
@@ -829,12 +1048,15 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
             printf("}\n");
             /* * Update response * */
             if(!first_item) {
-              CONTENT_PRINTF(",");
+              plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
+//              CONTENT_PRINTF(",");
             } else {
-              CONTENT_PRINTF("[");
+              plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
+//              CONTENT_PRINTF("[");
             }
             first_item = 0;
-            CONTENT_PRINTF("%u", link->handle);
+            plexi_reply_uint_if_possible(link->handle, buffer, &bufpos, bufsize, &strpos, offset);
+//            CONTENT_PRINTF("%u", link->handle);
           } else {
             coap_set_status_code(response, INTERNAL_SERVER_ERROR_5_00);
             coap_set_payload(response, "Link could not be added", 23);
@@ -873,10 +1095,25 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
         break;
       }
     }
-    CONTENT_PRINTF("]");
-
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+    plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
+//    CONTENT_PRINTF("]");
+    if(bufpos > 0) {
+      /* Build the header of the reply */
+      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+      /* Build the payload of the reply */
+      REST.set_response_payload(response, buffer, bufpos);
+    } else if(strpos > 0) {
+      coap_set_status_code(response, BAD_OPTION_4_02);
+      coap_set_payload(response, "BlockOutOfScope", 15);
+    }
+    if(strpos <= *offset + bufsize) {
+      *offset = -1;
+    } else {
+      *offset += bufsize;
+    }
+//    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+//    REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
+//    REST.set_response_payload(response, buffer, bufpos);
   }
 }
 void
@@ -888,21 +1125,36 @@ plexi_tsch_init()
 
 #if PLEXI_WITH_LINK_STATISTICS
 static void
-print_stats(uint16_t id, uint8_t metric, plexi_stats_value_st value)
+plexi_reply_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st value, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
   if(!first_stat) {
-    CONTENT_PRINTF(",");
+    plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
+//    CONTENT_PRINTF(",");
   } else {
     first_stat = 0;
   }
-  CONTENT_PRINTF("{\"%s\":%u,\"%s\":", STATS_ID_LABEL, id, STATS_VALUE_LABEL);
+  plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
+  plexi_reply_string_if_possible(STATS_ID_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+  plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+  plexi_reply_uint_if_possible(id, buffer, &bufpos, bufsize, &strpos, offset);
+  plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
+  plexi_reply_string_if_possible(STATS_VALUE_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
+  plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+//  CONTENT_PRINTF("{\"%s\":%u,\"%s\":", STATS_ID_LABEL, id, STATS_VALUE_LABEL);
   if(metric == ASN) {
-    CONTENT_PRINTF("\"%x\"}", (int)value);
+    plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_hex_if_possible((unsigned int)value, buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_string_if_possible("\"}", buffer, &bufpos, bufsize, &strpos, offset);
+//    CONTENT_PRINTF("\"%x\"}", (int)value);
   } else if(metric == RSSI) {
     int x = value;
-    CONTENT_PRINTF("%d}", x);
+    plexi_reply_uint_if_possible((unsigned int)x, buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
+//    CONTENT_PRINTF("%d}", x);
   } else {
-    CONTENT_PRINTF("%u}", (unsigned)value);
+    plexi_reply_uint_if_possible((unsigned int)value, buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
+//    CONTENT_PRINTF("%u}", (unsigned)value);
   }
 }
 #endif

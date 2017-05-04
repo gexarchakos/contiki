@@ -1,1 +1,1 @@
-plexi_src = plexi.c plexi-rpl.c plexi-neighbors.c plexi-tsch.c plexi-queue-statistics.c plexi-link-statistics.c
+plexi_src = plexi.c plexi-rpl.c plexi-tsch.c #plexi-neighbors.c plexi-queue-statistics.c plexi-link-statistics.c

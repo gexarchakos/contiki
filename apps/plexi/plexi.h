@@ -51,6 +51,7 @@
 #include <stdio.h>
 #include "contiki.h"
 #include "net/linkaddr.h"
+#include "net/ip/uip.h"
 #include "lib/list.h"
 #include "jsonparse.h"
 
@@ -95,14 +96,14 @@
  * Though a local variable could be used, this global buffer allows the construction of a payload progressively in multiple functions.
  * \sa MAX_DATA_LEN
  */
-char plexi_reply_content[MAX_DATA_LEN];
+//char plexi_reply_content[MAX_DATA_LEN];
 /** \var int plexi_reply_content_len
  * \brief Length of \link plexi_reply_content \endlink buffer.
  *
  * \link plexi_reply_content \endlink is not a null terminated string and this keeps track of the last character. Note that \link plexi_reply_content_len \endlink &le; \link MAX_DATA_LEN \endlink.
  * \sa plexi_reply_content
  */
-extern int plexi_reply_content_len;
+//extern int plexi_reply_content_len;
 
 /** \def CONTENT_PRINTF(...)
  * \brief printf-like macro to save strings to the reply buffer \link plexi_reply_content \endlink.
@@ -110,55 +111,18 @@ extern int plexi_reply_content_len;
  * Like snprintf, CONTENT_PRINTF writes the formatted input to the \link plexi_reply_content \endlink buffer and increases the \link plexi_reply_content_len \endlink to reflect the actual size
  * of the buffer. The input parameters are the same as those of printf. If the formatted input exceeds the maximum size of \link plexi_reply_content \endlink, the buffer remains unchanged.
  */
-#define CONTENT_PRINTF(...) { \
-    if(plexi_reply_content_len < sizeof(plexi_reply_content)) { \
-      plexi_reply_content_len += snprintf(plexi_reply_content + plexi_reply_content_len, sizeof(plexi_reply_content) - plexi_reply_content_len, __VA_ARGS__); } \
-}
+//#define CONTENT_PRINTF(...) { \
+//    if(plexi_reply_content_len < sizeof(plexi_reply_content)) { \
+//      plexi_reply_content_len += snprintf(plexi_reply_content + plexi_reply_content_len, sizeof(plexi_reply_content) - plexi_reply_content_len, __VA_ARGS__); } \
+//}
 
-void plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
 uint8_t plexi_reply_string_if_possible(char *s, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
 uint8_t plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_uint_if_possible(unsigned int d, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+uint8_t plexi_reply_ip_if_possible(const uip_ipaddr_t *addr, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
 
-/*
-#define ADD_CHAR_IF_POSSIBLE(character, buffer, bufpos, bufsize, strpos, offset) \
-  if(strpos >= offset && bufpos < bufsize) { \
-    buffer[bufpos++] = character; \
-  } \
-  ++strpos
 
-#define ADD_STRING_IF_POSSIBLE(string, buffer, bufpos, bufsize, strpos, offset) \
-  if(strpos + strlen(string) > offset) { \
-    bufpos += snprintf((char *)buffer + bufpos, \
-                       bufsize - bufpos + 1, \
-                       "%s", \
-                       string \
-                       + (offset - (int32_t)strpos > 0 ? \
-                          offset - (int32_t)strpos : 0)); \
-  } \
-  strpos += strlen(string)
-
-#define ADD_HEX_IF_POSSIBLE(hex, buffer, bufpos, bufsize, strpos, offset) \
-  int hexlen = 0; \
-  uint64_t temp_hex = (uint64_t)hex; \
-  while(temp_hex > 0) { \
-    hexlen++; \
-    temp_hex = temp_hex>>4; \
-  } \
-  int mask = 0; \
-  int i = hexlen - offset + (int32_t)strpos; \
-  while(i>0) { \
-    mask = mask<<4; \
-    mask = mask | 0xF; \
-  } \
-  if(strpos + hexlen > offset) { \
-    bufpos += snprintf((char *)buffer + bufpos, \
-                       bufsize - bufpos + 1, \
-                       "%x", \
-                       (offset - (int32_t)strpos > 0 ? \
-                          hex & mask : hex)); \
-  } \
-  strpos += strlen(string)
-*/
 /**
  * \brief Utility function. Converts na field (string containing the lower 64bit of the IPv6) to
  * 64-bit MAC.

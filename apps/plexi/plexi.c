@@ -38,6 +38,7 @@
  *
  */
 
+#include "net/ip/ip64-addr.h"
 #include "er-coap-engine.h" /* needed for rest-init-engine */
 
 #include "plexi.h"
@@ -73,7 +74,7 @@
 #include "plexi-queue-statistics.h"
 #endif
 
-int plexi_reply_content_len = 0;
+//int plexi_reply_content_len = 0;
 
 void
 plexi_init()
@@ -178,13 +179,14 @@ plexi_linkaddr_to_eui64(char *buf, linkaddr_t *addr)
   return strlen(buf);
 }
 
-void
+uint8_t
 plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
   if(*strpos >= *offset && *bufpos < bufsize) {
     buffer[(*bufpos)++] = c;
   }
   ++(*strpos);
+  return 1;
 }
 
 uint8_t
@@ -197,10 +199,10 @@ plexi_reply_string_if_possible(char *s, uint8_t *buffer, size_t *bufpos, uint16_
                        s
                        + (*offset - (int32_t)(*strpos) > 0 ?
                           *offset - (int32_t)(*strpos) : 0));
-//    if(*bufpos >= bufsize) {
+    if(*bufpos >= bufsize) {
 //      printf("s=%s, buffer=%s, bufpos=%d, strpos=%d\n",s,(char*)buffer,(int)*bufpos,(int)*strpos);
-//      return 0;
-//    }
+      return 0;
+    }
   }
   *strpos += strlen(s);
   return 1;
@@ -220,17 +222,131 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
   while(i>0) {
     mask = mask<<4;
     mask = mask | 0xF;
+    i--;
   }
-  if(*strpos + hexlen > *offset) { \
-    (*bufpos) += snprintf((char *)buffer + (*bufpos), \
-                       bufsize - (*bufpos) + 1, \
-                       "%x", \
-                       (*offset - (int32_t)(*strpos) > 0 ? \
-                          (unsigned int)hex & mask : (unsigned int)hex)); \
+  if(*strpos + hexlen > *offset) {
+    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+                       bufsize - (*bufpos) + 1,
+                       "%x",
+                       (*offset - (int32_t)(*strpos) > 0 ?
+                          (unsigned int)hex & mask : (unsigned int)hex));
     if(*bufpos >= bufsize) {
       return 0;
     }
   }
   *strpos += hexlen;
   return 1;
+}
+
+uint32_t
+embedded_pow10(x)
+{
+  if(x==1)
+    return 10;
+  else if(x==2)
+    return 100;
+  else if(x==3)
+    return 1000;
+  else if(x==4)
+    return 10000;
+  else if(x==5)
+    return 100000;
+  else if(x==6)
+    return 1000000;
+  else
+    return 0;
+}
+
+
+uint8_t
+plexi_reply_uint_if_possible(unsigned int d, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+{
+  int len = 0;
+  unsigned int temp_d = d;
+  while(temp_d > 0) {
+    len++;
+    temp_d /= 10;
+  }
+  if(*strpos + len > *offset) {
+    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+                       bufsize - (*bufpos) + 1,
+                       "%d",
+                       (*offset - (int32_t)(*strpos) > 0 ?
+                          d % embedded_pow10(len - *offset + (int32_t)(*strpos)) : (unsigned int)d));
+    if(*bufpos >= bufsize) {
+      return 0;
+    }
+  }
+  *strpos += len;
+  return 1;
+}
+
+uint8_t
+plexi_reply_ip_if_possible(const uip_ipaddr_t *addr, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+{
+#if NETSTACK_CONF_WITH_IPV6
+  uint16_t a;
+  unsigned int i;
+  int f;
+#endif /* NETSTACK_CONF_WITH_IPV6 */
+  if(addr == NULL) {
+    return 1;
+  }
+#if NETSTACK_CONF_WITH_IPV6
+  if(ip64_addr_is_ipv4_mapped_addr(addr)) {
+    /*
+     * Printing IPv4-mapped addresses is done according to RFC 3513 [1]
+     *
+     *     "An alternative form that is sometimes more
+     *     convenient when dealing with a mixed environment
+     *     of IPv4 and IPv6 nodes is x:x:x:x:x:x:d.d.d.d,
+     *     where the 'x's are the hexadecimal values of the
+     *     six high-order 16-bit pieces of the address, and
+     *     the 'd's are the decimal values of the four
+     *     low-order 8-bit pieces of the address (standard
+     *     IPv4 representation)."
+     *
+     * [1] https://tools.ietf.org/html/rfc3513#page-5
+     */
+    plexi_reply_string_if_possible("::FFFF:", buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_uint_if_possible((unsigned int)addr->u8[12], buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_uint_if_possible((unsigned int)addr->u8[13], buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_uint_if_possible((unsigned int)addr->u8[14], buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_uint_if_possible((unsigned int)addr->u8[15], buffer, bufpos, bufsize, strpos, offset);
+
+//    PRINTA("::FFFF:%u.%u.%u.%u", addr->u8[12], addr->u8[13], addr->u8[14], addr->u8[15]);
+  } else {
+    for(i = 0, f = 0; i < sizeof(uip_ipaddr_t); i += 2) {
+      a = (addr->u8[i] << 8) + addr->u8[i + 1];
+      if(a == 0 && f >= 0) {
+        if(f++ == 0) {
+          plexi_reply_string_if_possible("::", buffer, bufpos, bufsize, strpos, offset);
+//          PRINTA("::");
+        }
+      } else {
+        if(f > 0) {
+          f = -1;
+        } else if(i > 0) {
+          plexi_reply_char_if_possible(':', buffer, bufpos, bufsize, strpos, offset);
+//          PRINTA(":");
+        }
+        plexi_reply_hex_if_possible((unsigned int)a, buffer, bufpos, bufsize, strpos, offset);
+//        PRINTA("%x", a);
+      }
+    }
+  }
+#else /* NETSTACK_CONF_WITH_IPV6 */
+  plexi_reply_uint_if_possible((unsigned int)addr->u8[0], buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_uint_if_possible((unsigned int)addr->u8[1], buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_uint_if_possible((unsigned int)addr->u8[2], buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_uint_if_possible((unsigned int)addr->u8[3], buffer, bufpos, bufsize, strpos, offset);
+//  PRINTA("%u.%u.%u.%u", addr->u8[0], addr->u8[1], addr->u8[2], addr->u8[3]);
+#endif /* NETSTACK_CONF_WITH_IPV6 */
+
 }
