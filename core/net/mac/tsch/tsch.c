@@ -892,7 +892,7 @@ static void
 send_packet(mac_callback_t sent, void *ptr)
 {
   int ret = MAC_TX_DEFERRED;
-#if !PROCESS_CONF_NO_PROCESS_NAMES
+#if TSCH_LOG_LEVEL
   int packet_count_before;
 #endif
   int hdr_len = 0;
@@ -936,9 +936,11 @@ send_packet(mac_callback_t sent, void *ptr)
     packetbuf_set_attr(PACKETBUF_ATTR_KEY_INDEX, TSCH_SECURITY_KEY_INDEX_OTHER);
   }
 #endif /* TSCH_SECURITY_ENABLED */
-#if !PROCESS_CONF_NO_PROCESS_NAMES
+
+#if TSCH_LOG_LEVEL
   packet_count_before = tsch_queue_packet_count(addr);
 #endif
+
   if((hdr_len = NETSTACK_FRAMER.create()) < 0) {
     PRINTF("TSCH:! can't send packet due to framer error\n");
     ret = MAC_TX_ERR;

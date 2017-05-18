@@ -16,9 +16,7 @@ LDFLAGS += -Wl,-Os,--gc-sections,--undefined=_reset_vector__,--undefined=Interru
 endif
 
 CFLAGS += -DWITH_TSCH
-CFLAGS += -DWITH_PLEXI
 MODULES += core/net/mac/tsch
-APPS += plexi
 
 CFLAGS += -DPROJECT_CONF_H=\"project-conf.h\"
 PROJECTDIRS += .. ../tools
@@ -30,6 +28,16 @@ CFLAGS += -DUIP_CONF_TCP=0
 APPS += json
 APPS += er-coap
 APPS += rest-engine
+
+# The plexi configuration part
+PLEXI_WITH_RPL_DAG_RESOURCE = 1
+PLEXI_WITH_SLOTFRAME_RESOURCE = 1
+PLEXI_WITH_TSCH_RESOURCE = 1
+PLEXI_WITH_NEIGHBOR_RESOURCE = 0
+PLEXI_WITH_LINK_STATISTICS = 0
+PLEXI_WITH_QUEUE_STATISTICS = 0
+APPS += plexi
+
 
 ifeq ($(PREFIX),)
  PREFIX = aaaa::1/64

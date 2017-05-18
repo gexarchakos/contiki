@@ -1,1 +1,40 @@
-plexi_src = plexi.c plexi-rpl.c plexi-tsch.c #plexi-neighbors.c plexi-queue-statistics.c plexi-link-statistics.c
+REST_RESOURCES_DIR = .
+REST_RESOURCES_FILES =
+
+CFLAGS += -DWITH_PLEXI
+
+ifeq ($(PLEXI_WITH_RPL_DAG_RESOURCE),1)
+  REST_RESOURCES_FILES += plexi-rpl.c
+  CFLAGS += -DPLEXI_WITH_RPL_DAG_RESOURCE
+endif
+
+ifeq ($(PLEXI_WITH_SLOTFRAME_RESOURCE),1)
+  REST_RESOURCES_FILES += plexi-slotframe.c
+  CFLAGS += -DPLEXI_WITH_SLOTFRAME_RESOURCE
+endif
+
+ifeq ($(PLEXI_WITH_TSCH_RESOURCE),1)
+  REST_RESOURCES_FILES += plexi-tsch.c
+  CFLAGS += -DPLEXI_WITH_TSCH_RESOURCE
+endif
+
+ifeq ($(PLEXI_WITH_NEIGHBOR_RESOURCE),1)
+  REST_RESOURCES_FILES += plexi-neighbors.c
+  CFLAGS += -DPLEXI_WITH_NEIGHBOR_RESOURCE
+endif
+
+ifeq ($(PLEXI_WITH_LINK_STATISTICS),1)
+  REST_RESOURCES_FILES += plexi-link-statistics.c
+  CFLAGS += -DPLEXI_WITH_LINK_STATISTICS
+endif
+
+ifeq ($(PLEXI_WITH_QUEUE_STATISTICS),1)
+  REST_RESOURCES_FILES += plexi-queue-statistics.c
+  CFLAGS += -DPLEXI_WITH_QUEUE_STATISTICS
+endif
+
+PROJECTDIRS += $(REST_RESOURCES_DIR)
+PROJECT_SOURCEFILES += $(REST_RESOURCES_FILES)
+
+
+plexi_src = plexi.c

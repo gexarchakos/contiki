@@ -55,8 +55,17 @@
 #include "net/rpl/rpl.h"
 
 #include "plexi.h"
-#include "plexi-conf.h"
-#include "plexi-rpl.h"
+//#include "plexi-conf.h"
+//#include "plexi-rpl.h"
+
+#ifndef PLEXI_RPL_UPDATE_INTERVAL
+/**
+ * \brief Time distance between a change in RPL DoDAG and the notification sent to subscribers
+ */
+#define PLEXI_RPL_UPDATE_INTERVAL (30 * CLOCK_SECOND)
+#endif
+
+
 
 /** \brief
  *         Retrieves the preferred parent and direct children of a node in a RPL DoDAG
@@ -116,15 +125,6 @@ static struct ctimer rpl_changed_timer;
  * \brief Callback registered to \ref rpl_changed_timer event. Once the timer expires this callback is triggered and subscribers notified.
  */
 static void plexi_rpl_changed_handler(void *ptr);
-
-/**
- * \brief Callback registered to events on RPL DoDAG.
- *
- * Upon an event this callback is triggered which then calls the \link plexi_dag_event_handler \endlink.
- * It introduces a delay of \ref PLEXI_RPL_UPDATE_INTERVAL before the \link plexi_dag_event_handler \endlink is called.
- * This delay is counted with the help of \link rpl_changed_timer \endlink.
- */
-static void rpl_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int num_routes);
 
 static void
 plexi_get_dag_handler(void *request,
@@ -212,7 +212,8 @@ plexi_rpl_changed_handler(void *ptr)
 {
   REST.notify_subscribers(&resource_rpl_dag);
 }
-static void
+
+void
 rpl_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int num_routes)
 {
   /* We have added or removed a routing entry, notify subscribers */

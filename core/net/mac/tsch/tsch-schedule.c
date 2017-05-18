@@ -312,10 +312,16 @@ tsch_schedule_get_link_by_timeslot(struct tsch_slotframe *slotframe, uint16_t ti
 struct tsch_slotframe*
 tsch_schedule_get_slotframe_next(struct tsch_slotframe* sf)
 {
-  if(tsch_is_locked()) return NULL;
+    printf("\n\n\n GOT HERE \n\n\n");
+  if(tsch_is_locked()) {
+    printf("\n\n\n TSCH LOCKED \n\n\n");
+    return NULL;
+  }
   if(sf == NULL) {
+    printf("\n\n\n HEAD SF \n\n\n");
     return list_head(slotframe_list);
   } else {
+    printf("\n\n\n NEXT SF \n\n\n");
     return list_item_next(sf);
   }
 }

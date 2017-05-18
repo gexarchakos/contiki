@@ -42,7 +42,7 @@
 #ifndef __PLEXI_INTERFACE_H__
 #define __PLEXI_INTERFACE_H__
 
-#include "plexi-conf.h"
+//#include "plexi-conf.h"
 
 /* when RPL module is enabled, two only subresources are defined */
 #if PLEXI_WITH_RPL_DAG_RESOURCE
@@ -70,14 +70,18 @@
  * \brief subresource URL of the last moment the neighbor sent a packet
  */
 #define NEIGHBORS_ASN_LABEL "asn"
+#endif
+
+#if PLEXI_WITH_NEIGHBOR_RESOURCE || PLEXI_WITH_TSCH_RESOURCE
 /** \def NEIGHBORS_TNA_LABEL
  * \brief subresource URL of the neighbors EUI-64 address
  */
 #define NEIGHBORS_TNA_LABEL "tna"
 #endif
 
-/* when TSCH is enabled, slotframes and their two only subresources are defined */
-#if PLEXI_WITH_TSCH_RESOURCE
+
+/* when slotframe or link resources are enabled, slotframes' subresources are defined */
+#if PLEXI_WITH_SLOTFRAME_RESOURCE || PLEXI_WITH_TSCH_RESOURCE
 /** \def FRAME_RESOURCE
  * \brief URL of slotframe resource
  */
@@ -90,9 +94,11 @@
  * \brief subresource URL of slotframe size
  */
 #define FRAME_SLOTS_LABEL "slots"
-/** \def LINK_RESOURCE
- * \brief URL of list of links resource
- */
+#endif
+
+
+/* when TSCH is enabled, slotframes and their two only subresources are defined */
+#if PLEXI_WITH_TSCH_RESOURCE
 #define LINK_RESOURCE "6top/cellList"
 /** \def LINK_ID_LABEL
  * \brief subresource URL of link identifier

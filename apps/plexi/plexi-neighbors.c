@@ -48,15 +48,21 @@
  *
  */
 
-#include "plexi-conf.h"
+//#include "plexi-conf.h"
 
 #include "plexi-interface.h"
 
-#include "plexi-neighbors.h"
 #include "plexi.h"
 #include "plexi-link-statistics.h"
 
 #include "er-coap-engine.h"
+
+#ifndef PLEXI_NEIGHBOR_UPDATE_INTERVAL
+/**
+ * \brief plexi notifies observers of neighbor list every \ref PLEXI_NEIGHBOR_UPDATE_INTERVAL secs
+ */
+#define PLEXI_NEIGHBOR_UPDATE_INTERVAL      (10 * CLOCK_SECOND)
+#endif
 
 struct aggregate_stats_struct {
   int rssi, lqi, etx, pdr;
@@ -324,7 +330,7 @@ plexi_neighbors_changed_handler(void *ptr)
  *
  * \bug UIP+DS6_NOTIFICATION_* do not provide a reliable way to listen to events
  */
-static void
+void
 route_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int num_routes)
 {
   /* We have added or removed a routing entry, notify subscribers */

@@ -42,8 +42,8 @@
 #include "er-coap-engine.h" /* needed for rest-init-engine */
 
 #include "plexi.h"
-#include "plexi-conf.h"
 #include "plexi-interface.h"
+#include "../rest-engine/rest-engine.h"
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -51,17 +51,23 @@
 
 /* activate RPL-related module of plexi only when needed */
 #if PLEXI_WITH_RPL_DAG_RESOURCE
-#include "plexi-rpl.h"
+extern resource_t resource_rpl_dag;
 #endif
 
 /* activate neighbor list monitoring module of plexi only when needed */
 #if PLEXI_WITH_NEIGHBOR_RESOURCE
-#include "plexi-neighbors.h"
+extern resource_t resource_6top_nbrs;
+#endif
+
+
+/* activate slotframe resource module of plexi only when needed */
+#if PLEXI_WITH_SLOTFRAME_RESOURCE
+extern resource_t resource_6top_slotframe;
 #endif
 
 /* activate TSCH-related module of plexi only when needed */
 #if PLEXI_WITH_TSCH_RESOURCE
-#include "plexi-tsch.h"
+extern resource_t resource_6top_links;
 #endif
 
 /* activate link quality monitoring module of plexi only when needed */
@@ -74,8 +80,6 @@
 #include "plexi-queue-statistics.h"
 #endif
 
-//int plexi_reply_content_len = 0;
-
 void
 plexi_init()
 {
@@ -85,15 +89,23 @@ plexi_init()
   rest_init_engine();
 
 #if PLEXI_WITH_RPL_DAG_RESOURCE
-  plexi_rpl_init(); /* initialize plexi-rpl module */
+  rest_activate_resource(&resource_rpl_dag, DAG_RESOURCE);
+  static struct uip_ds6_notification n;
+  uip_ds6_notification_add(&n, rpl_changed_callback);
 #endif
 
 #if PLEXI_WITH_NEIGHBOR_RESOURCE
-  plexi_neighbors_init(); /* initialize plexi-neighbors module */
+  rest_activate_resource(&resource_6top_nbrs, NEIGHBORS_RESOURCE);
+  static struct uip_ds6_notification m;
+  uip_ds6_notification_add(&m, route_changed_callback);
+#endif
+
+#if PLEXI_WITH_SLOTFRAME_RESOURCE
+    rest_activate_resource(&resource_6top_slotframe, FRAME_RESOURCE);
 #endif
 
 #if PLEXI_WITH_TSCH_RESOURCE
-  plexi_tsch_init(); /* initialize plexi-tsch module */
+  rest_activate_resource(&resource_6top_links, LINK_RESOURCE);
 #endif
 
 #if PLEXI_WITH_LINK_STATISTICS
@@ -155,30 +167,6 @@ plexi_eui64_to_linkaddr(const char *na_inbuf, int bufsize, linkaddr_t *linkaddre
   linkaddress->u8[0] ^= 0x02;
   return 1;
 }
-int
-plexi_linkaddr_to_eui64(char *buf, linkaddr_t *addr)
-{
-  char *pointer = buf;
-  unsigned int i;
-  for(i = 0; i < sizeof(linkaddr_t); i++) {
-    if(i > 1 && i != 3 && i != 4 && i != 7) {
-      *pointer = ':';
-      pointer++;
-    }
-    if(i == 4) {
-      continue;
-    }
-    if(i == 0) {
-      sprintf(pointer, "%x", addr->u8[i] ^ 0x02);
-      pointer++;
-    } else {
-      sprintf(pointer, "%02x", addr->u8[i]);
-      pointer += 2;
-    }
-  }
-  return strlen(buf);
-}
-
 uint8_t
 plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
@@ -200,7 +188,6 @@ plexi_reply_string_if_possible(char *s, uint8_t *buffer, size_t *bufpos, uint16_
                        + (*offset - (int32_t)(*strpos) > 0 ?
                           *offset - (int32_t)(*strpos) : 0));
     if(*bufpos >= bufsize) {
-//      printf("s=%s, buffer=%s, bufpos=%d, strpos=%d\n",s,(char*)buffer,(int)*bufpos,(int)*strpos);
       return 0;
     }
   }
@@ -209,7 +196,7 @@ plexi_reply_string_if_possible(char *s, uint8_t *buffer, size_t *bufpos, uint16_
 }
 
 uint8_t
-plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+plexi_reply_02hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
   int hexlen = 0;
   unsigned int temp_hex = hex;
@@ -217,6 +204,8 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
     hexlen++;
     temp_hex = temp_hex>>4;
   }
+  if(hexlen%2 == 1)
+    hexlen++;
   int mask = 0;
   int i = hexlen - (int)*offset + (int)(*strpos);
   while(i>0) {
@@ -225,11 +214,18 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
     i--;
   }
   if(*strpos + hexlen > *offset) {
-    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+    if((hexlen - (int)*offset + (int)(*strpos))%2 == 0)
+      (*bufpos) += snprintf((char *)buffer + (*bufpos),
+                       bufsize - (*bufpos) + 1,
+                       "%02x",
+                       (*offset - (int32_t)(*strpos) > 0 ?
+                          hex & mask : hex));
+    else
+      (*bufpos) += snprintf((char *)buffer + (*bufpos),
                        bufsize - (*bufpos) + 1,
                        "%x",
                        (*offset - (int32_t)(*strpos) > 0 ?
-                          (unsigned int)hex & mask : (unsigned int)hex));
+                          hex & mask : hex));
     if(*bufpos >= bufsize) {
       return 0;
     }
@@ -259,26 +255,44 @@ embedded_pow10(x)
 
 
 uint8_t
-plexi_reply_uint_if_possible(unsigned int d, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+plexi_reply_uint16_if_possible(uint16_t d, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
-  int len = 0;
-  unsigned int temp_d = d;
-  while(temp_d > 0) {
+  int len = 1;
+  uint16_t temp_d = d;
+  while(temp_d > 9) {
     len++;
     temp_d /= 10;
   }
   if(*strpos + len > *offset) {
     (*bufpos) += snprintf((char *)buffer + (*bufpos),
                        bufsize - (*bufpos) + 1,
-                       "%d",
+                       "%" PRIu16,
                        (*offset - (int32_t)(*strpos) > 0 ?
-                          d % embedded_pow10(len - *offset + (int32_t)(*strpos)) : (unsigned int)d));
+                          (uint16_t)d % (uint16_t)embedded_pow10(len - *offset + (int32_t)(*strpos)) : (uint16_t)d));
     if(*bufpos >= bufsize) {
       return 0;
     }
   }
   *strpos += len;
   return 1;
+}
+
+void
+plexi_reply_lladdr_if_possible(const linkaddr_t *lladdr, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+{
+#if LINKADDR_SIZE == 2
+    plexi_reply_02hex_if_possible((unsigned int)((*lladdr)&0xFF), buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_char_if_possible(':', buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_02hex_if_possible((unsigned int)(((*lladdr)>>8)&0xFF), buffer, bufpos, bufsize, strpos, offset);
+#else
+  unsigned int i;
+  for(i = 0; i < LINKADDR_SIZE; i++) {
+    if(i > 0) {
+      plexi_reply_char_if_possible(':', buffer, bufpos, bufsize, strpos, offset);
+    }
+    plexi_reply_02hex_if_possible((unsigned int)lladdr->u8[i], buffer, bufpos, bufsize, strpos, offset);
+  }
+#endif
 }
 
 uint8_t
@@ -290,7 +304,7 @@ plexi_reply_ip_if_possible(const uip_ipaddr_t *addr, uint8_t *buffer, size_t *bu
   int f;
 #endif /* NETSTACK_CONF_WITH_IPV6 */
   if(addr == NULL) {
-    return 1;
+    return 0;
   }
 #if NETSTACK_CONF_WITH_IPV6
   if(ip64_addr_is_ipv4_mapped_addr(addr)) {
@@ -309,13 +323,13 @@ plexi_reply_ip_if_possible(const uip_ipaddr_t *addr, uint8_t *buffer, size_t *bu
      * [1] https://tools.ietf.org/html/rfc3513#page-5
      */
     plexi_reply_string_if_possible("::FFFF:", buffer, bufpos, bufsize, strpos, offset);
-    plexi_reply_uint_if_possible((unsigned int)addr->u8[12], buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_uint16_if_possible((uint16_t)addr->u8[12], buffer, bufpos, bufsize, strpos, offset);
     plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
-    plexi_reply_uint_if_possible((unsigned int)addr->u8[13], buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_uint16_if_possible((uint16_t)addr->u8[13], buffer, bufpos, bufsize, strpos, offset);
     plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
-    plexi_reply_uint_if_possible((unsigned int)addr->u8[14], buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_uint16_if_possible((uint16_t)addr->u8[14], buffer, bufpos, bufsize, strpos, offset);
     plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
-    plexi_reply_uint_if_possible((unsigned int)addr->u8[15], buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_uint16_if_possible((uint16_t)addr->u8[15], buffer, bufpos, bufsize, strpos, offset);
 
 //    PRINTA("::FFFF:%u.%u.%u.%u", addr->u8[12], addr->u8[13], addr->u8[14], addr->u8[15]);
   } else {
@@ -333,20 +347,20 @@ plexi_reply_ip_if_possible(const uip_ipaddr_t *addr, uint8_t *buffer, size_t *bu
           plexi_reply_char_if_possible(':', buffer, bufpos, bufsize, strpos, offset);
 //          PRINTA(":");
         }
-        plexi_reply_hex_if_possible((unsigned int)a, buffer, bufpos, bufsize, strpos, offset);
+        plexi_reply_02hex_if_possible((uint16_t)a, buffer, bufpos, bufsize, strpos, offset);
 //        PRINTA("%x", a);
       }
     }
   }
 #else /* NETSTACK_CONF_WITH_IPV6 */
-  plexi_reply_uint_if_possible((unsigned int)addr->u8[0], buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_uint16_if_possible((uint16_t)addr->u8[0], buffer, bufpos, bufsize, strpos, offset);
   plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
-  plexi_reply_uint_if_possible((unsigned int)addr->u8[1], buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_uint16_if_possible((uint16_t)addr->u8[1], buffer, bufpos, bufsize, strpos, offset);
   plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
-  plexi_reply_uint_if_possible((unsigned int)addr->u8[2], buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_uint16_if_possible((uint16_t)addr->u8[2], buffer, bufpos, bufsize, strpos, offset);
   plexi_reply_char_if_possible('.', buffer, bufpos, bufsize, strpos, offset);
-  plexi_reply_uint_if_possible((unsigned int)addr->u8[3], buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_uint16_if_possible((uint16_t)addr->u8[3], buffer, bufpos, bufsize, strpos, offset);
 //  PRINTA("%u.%u.%u.%u", addr->u8[0], addr->u8[1], addr->u8[2], addr->u8[3]);
 #endif /* NETSTACK_CONF_WITH_IPV6 */
-
+  return 1;
 }

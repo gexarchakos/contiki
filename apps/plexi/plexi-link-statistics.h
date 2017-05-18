@@ -39,7 +39,7 @@
 #ifndef __PLEXI_LINK_STATISTICS_H__
 #define __PLEXI_LINK_STATISTICS_H__
 
-#include "plexi-conf.h"
+//#include "plexi-conf.h"
 
 #include "lib/memb.h"
 #include "lib/list.h"

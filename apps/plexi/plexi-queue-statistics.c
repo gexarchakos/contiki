@@ -36,7 +36,7 @@
  *
  */
 
-#include "plexi-conf.h"
+//#include "plexi-conf.h"
 
 #include <stdlib.h>
 
