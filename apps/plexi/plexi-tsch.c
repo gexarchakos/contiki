@@ -296,31 +296,23 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
               if(first_item) {
                 if(flag < 7 || uri_len > base_len + 1) {
                   plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF("[");
                 }
                 first_item = 0;
               } else {
                 plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF(",");
               }
               if(!strcmp(LINK_ID_LABEL, uri_subresource)) {
                 plexi_reply_uint16_if_possible(link->handle, buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF("%u", link->handle);
               } else if(!strcmp(FRAME_ID_LABEL, uri_subresource)) {
                 plexi_reply_uint16_if_possible(link->slotframe_handle, buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF("%u", link->slotframe_handle);
               } else if(!strcmp(LINK_SLOT_LABEL, uri_subresource)) {
                 plexi_reply_uint16_if_possible(link->timeslot, buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF("%u", link->timeslot);
               } else if(!strcmp(LINK_CHANNEL_LABEL, uri_subresource)) {
                 plexi_reply_uint16_if_possible(link->channel_offset, buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF("%u", link->channel_offset);
               } else if(!strcmp(LINK_OPTION_LABEL, uri_subresource)) {
                 plexi_reply_uint16_if_possible(link->link_options, buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF("%u", link->link_options);
               } else if(!strcmp(LINK_TYPE_LABEL, uri_subresource)) {
                 plexi_reply_uint16_if_possible(link->link_type, buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF("%u", link->link_type);
               } else if(!strcmp(NEIGHBORS_TNA_LABEL, uri_subresource)) {
                 if(!plexi_reply_tna_if_possible(&link->addr, buffer, &bufpos, bufsize, &strpos, offset)) {
                   coap_set_status_code(response, NOT_FOUND_4_04);
@@ -347,19 +339,15 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
                 plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
                 plexi_reply_string_if_possible(LINK_STATS_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
                 plexi_reply_string_if_possible("\":[", buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF(",\"%s\":[", LINK_STATS_LABEL);
                 first_stat = 1;
                 if(plexi_execute_over_link_stats(plexi_reply_stats_if_possible, link, NULL)) {
                   plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
-//                  CONTENT_PRINTF("]");
                 } else {
-//                  plexi_reply_content_len -= sizeof(LINK_STATS_LABEL)+4;
                   bufpos = undo_bufpos;
                   strpos = undo_strpos;
                 }
 #endif
                 plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
-//                CONTENT_PRINTF("}");
               }
             }
           }
@@ -370,7 +358,6 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
     }
     if(flag < 7 || uri_len > base_len + 1) {
       plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
-//      CONTENT_PRINTF("]");
     }
     if(!first_item) {
       if(bufpos > 0) {
@@ -401,7 +388,6 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
 static void
 plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
-//  plexi_reply_content_len = 0;
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
 
@@ -477,12 +463,10 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
             if(first_item) {
               if(flags < 7) {
                 plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);    
-//                CONTENT_PRINTF("[");
               }
               first_item = 0;
             } else {
               plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);    
-//              CONTENT_PRINTF(",");
             }
             plexi_reply_char_if_possible('{', buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_link_if_possible(link, buffer, &bufpos, bufsize, &strpos, offset);
@@ -502,7 +486,6 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
     }
     if(flags < 7) {
       plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
-//      CONTENT_PRINTF("]");
     }
     REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
     if(flags != 7 || !first_item) {
@@ -518,8 +501,6 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
       } else {
         *offset += bufsize;
       }
-//      REST.set_response_payload(response, (uint8_t *)plexi_reply_content, plexi_reply_content_len);
-//      REST.set_response_payload(response, buffer, bufpos);
     }
     coap_set_status_code(response, DELETED_2_02);
   } else {
@@ -529,38 +510,21 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
 }
 
 int
-plexi_string_to_linkaddr(char* address, linkaddr_t* lladdr) {
+plexi_string_to_linkaddr(char* address, unsigned int size, linkaddr_t* lladdr) {
   char *end;
   char *start = address;
   unsigned int count = 0;
-  uint8_t byte;
-  while((byte = (uint8_t)strtol(start,&end,16))) {
+  unsigned char byte;
+  while((byte = (unsigned char)strtol(start,&end,16)) && end-start < 3) {
     count++;
     lladdr->u8[count-1] = byte;
     if (count < LINKADDR_SIZE && *end == ':') {
       end++;
-    } else if (count == LINKADDR_SIZE && *end == '\0') {
+    } else if (count == LINKADDR_SIZE && *end != ':') {
       return 1;
     }
     start = end;
   }
-//  unsigned int i = 0;
-//  while(*start!='\0') {
-//    if (sscanf(start, "%x", &i)) {
-//      count++;
-//      if (i < 16)
-//        start += 1;
-//      else
-//        start += 2;
-//      if (count < LINKADDR_SIZE && *start == ':') {
-//        lladdr->u8[count-1] = (unsigned char) i;
-//        start += 1;
-//      } else if (count == LINKADDR_SIZE && *start == '\0') {
-//        lladdr->u8[count-1] = (unsigned char) i;
-//        return 1;
-//      }
-//    } else break;
-//  }
   return 0;
 }
 
@@ -571,7 +535,7 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
     inbox_post_link_len = 0;
     *inbox_post_link = '\0';
   }
-//  plexi_reply_content_len = 0;
+
   int first_item = 1;
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
@@ -637,14 +601,10 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
           new_tx_timeslot = so;
           new_tx_slotframe = fd;
           if((link = (struct tsch_link *)tsch_schedule_add_link(slotframe, (uint8_t)lo, lt, &na, (uint16_t)so, (uint16_t)co))) {
-//            char buf[32];
-//            plexi_linkaddr_to_eui64(buf, &na);
             PRINTF("PLEXI: added {\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u", \
                    LINK_ID_LABEL, link->handle, FRAME_ID_LABEL, fd, LINK_SLOT_LABEL, so, \
                    LINK_CHANNEL_LABEL, co, LINK_OPTION_LABEL, lo, LINK_TYPE_LABEL, lt);
             if(!linkaddr_cmp(&na, &linkaddr_null)) {
-//              char buf[32];
-//              plexi_linkaddr_to_eui64(buf, &na);
               PRINTF(",\"%s\":\"", NEIGHBORS_TNA_LABEL);
               PRINTLLADDR((const uip_lladdr_t *)&na);
               PRINTF("\"");
@@ -653,14 +613,11 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
             /* * Update response * */
             if(!first_item) {
               plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
-//              CONTENT_PRINTF(",");
             } else {
               plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
-//              CONTENT_PRINTF("[");
             }
             first_item = 0;
             plexi_reply_uint16_if_possible(link->handle, buffer, &bufpos, bufsize, &strpos, offset);
-//            CONTENT_PRINTF("%u", link->handle);
           } else {
             coap_set_status_code(response, INTERNAL_SERVER_ERROR_5_00);
             coap_set_payload(response, "Link could not be added", 23);
@@ -689,9 +646,7 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
       case JSON_TYPE_STRING:
         if(!strncmp(field_buf, NEIGHBORS_TNA_LABEL, sizeof(field_buf))) {
           jsonparse_copy_value(&js, value_buf, sizeof(value_buf));
-          if(!plexi_string_to_linkaddr(value_buf, &na)) {
-//          int x = plexi_eui64_to_linkaddr(value_buf, sizeof(value_buf), &na);
-//          if(!x) {
+          if(!plexi_string_to_linkaddr(value_buf, sizeof(value_buf), &na)) {
             coap_set_status_code(response, BAD_REQUEST_4_00);
             coap_set_payload(response, "Invalid target node address", 27);
             return;
@@ -701,7 +656,6 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
       }
     }
     plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
-//    CONTENT_PRINTF("]");
     if(bufpos > 0) {
       /* Build the header of the reply */
       REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
@@ -731,7 +685,6 @@ plexi_reply_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st 
 {
   if(!first_stat) {
     plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
-//    CONTENT_PRINTF(",");
   } else {
     first_stat = 0;
   }
@@ -742,21 +695,17 @@ plexi_reply_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st 
   plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
   plexi_reply_string_if_possible(STATS_VALUE_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
   plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
-//  CONTENT_PRINTF("{\"%s\":%u,\"%s\":", STATS_ID_LABEL, id, STATS_VALUE_LABEL);
   if(metric == ASN) {
     plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
     plexi_reply_02hex_if_possible((unsigned int)value, buffer, &bufpos, bufsize, &strpos, offset);
     plexi_reply_string_if_possible("\"}", buffer, &bufpos, bufsize, &strpos, offset);
-//    CONTENT_PRINTF("\"%x\"}", (int)value);
   } else if(metric == RSSI) {
     int x = value;
     plexi_reply_uint16_if_possible((unsigned int)x, buffer, &bufpos, bufsize, &strpos, offset);
     plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
-//    CONTENT_PRINTF("%d}", x);
   } else {
     plexi_reply_uint16_if_possible((unsigned int)value, buffer, &bufpos, bufsize, &strpos, offset);
     plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
-//    CONTENT_PRINTF("%u}", (unsigned)value);
   }
 }
 #endif
