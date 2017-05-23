@@ -55,8 +55,7 @@
 #include "net/rpl/rpl.h"
 
 #include "plexi.h"
-//#include "plexi-conf.h"
-//#include "plexi-rpl.h"
+#include "net/ip/uip-debug.h"
 
 #ifndef PLEXI_RPL_UPDATE_INTERVAL
 /**
@@ -140,7 +139,6 @@ plexi_get_dag_handler(void *request,
   REST.get_header_accept(request, &accept);
   /* make sure the request accepts JSON reply or does not specify the reply type */
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
-//    plexi_reply_content_len = 0;
     plexi_reply_char_if_possible('{', buffer, &bufpos, preferred_size, &strpos, offset);
     uip_ds6_defrt_t *default_route = uip_ds6_defrt_lookup(uip_ds6_defrt_choose());
     if(default_route)
@@ -148,7 +146,10 @@ plexi_get_dag_handler(void *request,
       plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
       plexi_reply_string_if_possible(DAG_PARENT_LABEL, buffer, &bufpos, preferred_size, &strpos, offset);
       plexi_reply_string_if_possible("\":[\"", buffer, &bufpos, preferred_size, &strpos, offset);
-      plexi_reply_ip_if_possible(&default_route->ipaddr, buffer, &bufpos, preferred_size, &strpos, offset);
+      uip_ipaddr_t p;
+      uip_ipaddr_copy(&p,&default_route->ipaddr);
+      p.u16[0] = rpl_get_any_dag()->prefix_info.prefix.u16[0];
+      plexi_reply_ip_if_possible(&p, buffer, &bufpos, preferred_size, &strpos, offset);
       plexi_reply_string_if_possible("\"]", buffer, &bufpos, preferred_size, &strpos, offset);
 
     /* TODO: get details per dag id other than the default */
@@ -171,7 +172,7 @@ plexi_get_dag_handler(void *request,
         plexi_reply_char_if_possible(',', buffer, &bufpos, preferred_size, &strpos, offset);
       }
       plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
-      plexi_reply_ip_if_possible(uip_ds6_route_nexthop(route), buffer, &bufpos, preferred_size, &strpos, offset);
+      plexi_reply_ip_if_possible(&route->ipaddr, buffer, &bufpos, preferred_size, &strpos, offset);
       plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
       if(bufpos > preferred_size && strpos - bufpos > *offset) {
         break;
