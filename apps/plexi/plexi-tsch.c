@@ -563,6 +563,7 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
       inbox_post_link_lock = PLEXI_REQUEST_CONTENT_UNLOCKED;
       return;
     }
+    printf("\nrequest content=%s %d", request_content, request_content_len);
     /* TODO: It is assumed that the node processes the post request fast enough to return the */
     /*       response within the window assumed by client before retransmitting */
     inbox_post_link_lock = PLEXI_REQUEST_CONTENT_UNLOCKED;
@@ -583,8 +584,8 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
     int lt = 0;   /* * link type * */
     linkaddr_t na;  /* * node address * */
 
-    char field_buf[16] = "";
-    char value_buf[16] = "";
+    char field_buf[24] = "";
+    char value_buf[24] = "";
     struct jsonparse_state js;
     jsonparse_setup(&js, (const char *)inbox_post_link, inbox_post_link_len);
     while((state = plexi_json_find_field(&js, field_buf, sizeof(field_buf)))) {
@@ -644,6 +645,7 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
         }
         break;
       case JSON_TYPE_STRING:
+        printf("\njson=%s",js.json);
         if(!strncmp(field_buf, NEIGHBORS_TNA_LABEL, sizeof(field_buf))) {
           jsonparse_copy_value(&js, value_buf, sizeof(value_buf));
           if(!plexi_string_to_linkaddr(value_buf, sizeof(value_buf), &na)) {
