@@ -178,12 +178,16 @@ plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint
     char *query_value = NULL;
     unsigned long value = -1;
     int query_value_len = REST.get_query_variable(request, FRAME_ID_LABEL, (const char **)(&query_value));
+    query = FRAME_ID_LABEL;
     if(!query_value) {
       query_value_len = REST.get_query_variable(request, FRAME_SLOTS_LABEL, (const char **)(&query_value));
+        query = FRAME_SLOTS_LABEL;
     }
     if(query_value) {
       *(query_value + query_value_len) = '\0';
       value = (unsigned)strtoul((const char *)query_value, &end, 10);
+    } else {
+      query = NULL;
     }
     /* make sure no other url structures are accepted */
     if((uri_len > base_len + 1 && strcmp(FRAME_ID_LABEL, uri_subresource) && strcmp(FRAME_SLOTS_LABEL, uri_subresource)) || (query && !query_value)) {
@@ -251,6 +255,7 @@ plexi_get_slotframe_handler(void *request, void *response, uint8_t *buffer, uint
     return;
   }
 }
+
 static void
 plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
@@ -282,35 +287,35 @@ plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uin
     /* Parse json input */
     while((state = plexi_json_find_field(&js, field_buf, sizeof(field_buf)))) {
       switch(state) {
-      case '{':   /* New element */
-        ns = 0;
-        fd = 0;
-        break;
-      case '}': {   /* End of current element */
-        struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_by_handle(fd);
-        if(!first_item) {
-          plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
-        }
-        first_item = 0;
-        if(slotframe || fd < 0) {
-          plexi_reply_char_if_possible('0', buffer, &bufpos, bufsize, &strpos, offset);
-        } else {
-          if(tsch_schedule_add_slotframe(fd, ns)) {
-            new_sf_count++;
-            plexi_reply_char_if_possible('1', buffer, &bufpos, bufsize, &strpos, offset);
-          } else {
-            plexi_reply_char_if_possible('0', buffer, &bufpos, bufsize, &strpos, offset);
+        case '{':   /* New element */
+          ns = 0;
+          fd = 0;
+          break;
+        case '}': {   /* End of current element */
+          struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_by_handle(fd);
+          if(!first_item) {
+            plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
           }
+          first_item = 0;
+          if(slotframe || fd < 0) {
+            plexi_reply_char_if_possible('0', buffer, &bufpos, bufsize, &strpos, offset);
+          } else {
+            if(tsch_schedule_add_slotframe(fd, ns)) {
+              new_sf_count++;
+              plexi_reply_char_if_possible('1', buffer, &bufpos, bufsize, &strpos, offset);
+            } else {
+              plexi_reply_char_if_possible('0', buffer, &bufpos, bufsize, &strpos, offset);
+            }
+          }
+          break;
         }
-        break;
-      }
-      case JSON_TYPE_NUMBER:   /* Try to remove the if statement and change { to [ on line 601. */
-        if(!strncmp(field_buf, FRAME_ID_LABEL, sizeof(field_buf))) {
-          fd = jsonparse_get_value_as_int(&js);
-        } else if(!strncmp(field_buf, FRAME_SLOTS_LABEL, sizeof(field_buf))) {
-          ns = jsonparse_get_value_as_int(&js);
-        }
-        break;
+        case JSON_TYPE_NUMBER:   /* Try to remove the if statement and change { to [ on line 601. */
+          if(!strncmp(field_buf, FRAME_ID_LABEL, sizeof(field_buf))) {
+            fd = jsonparse_get_value_as_int(&js);
+          } else if(!strncmp(field_buf, FRAME_SLOTS_LABEL, sizeof(field_buf))) {
+            ns = jsonparse_get_value_as_int(&js);
+          }
+          break;
       }
     }
     plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
@@ -339,6 +344,7 @@ plexi_post_slotframe_handler(void *request, void *response, uint8_t *buffer, uin
     return;
   }
 }
+
 static void
 plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
@@ -359,11 +365,9 @@ plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, u
       coap_set_payload(response, "Subresources are not supported for DELETE method", 48);
       return;
     }
-    const char *query = NULL;
     char *query_value = NULL;
     int query_value_len = REST.get_query_variable(request, FRAME_ID_LABEL, (const char **)(&query_value));
-
-    if((uri_len == base_len || uri_len == base_len + 1) && query && query_value) {
+    if((uri_len == base_len || uri_len == base_len + 1) && query_value) {
       *(query_value + query_value_len) = '\0';
       int id = (unsigned)strtoul((const char *)query_value, &end, 10);
 
@@ -395,7 +399,7 @@ plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, u
         }
       }
       coap_set_status_code(response, DELETED_2_02);
-    } else if(!query) {
+    } else if(!query_value) {
       /* TODO: make sure it is idempotent */
       struct tsch_slotframe *sf = NULL;
       short int first_item = 1;
@@ -438,7 +442,7 @@ plexi_delete_slotframe_handler(void *request, void *response, uint8_t *buffer, u
         *offset += bufsize;
       }
       coap_set_status_code(response, DELETED_2_02);
-    } else if(query) {
+    } else if(query_value) {
       coap_set_status_code(response, NOT_IMPLEMENTED_5_01);
       coap_set_payload(response, "Supports only slot frame id as query", 29);
       return;
