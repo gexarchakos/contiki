@@ -527,6 +527,43 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
     return;
   }
 }
+
+int
+plexi_string_to_linkaddr(char* address, linkaddr_t* lladdr) {
+  char *end;
+  char *start = address;
+  unsigned int count = 0;
+  uint8_t byte;
+  while((byte = (uint8_t)strtol(start,&end,16))) {
+    count++;
+    lladdr->u8[count-1] = byte;
+    if (count < LINKADDR_SIZE && *end == ':') {
+      end++;
+    } else if (count == LINKADDR_SIZE && *end == '\0') {
+      return 1;
+    }
+    start = end;
+  }
+//  unsigned int i = 0;
+//  while(*start!='\0') {
+//    if (sscanf(start, "%x", &i)) {
+//      count++;
+//      if (i < 16)
+//        start += 1;
+//      else
+//        start += 2;
+//      if (count < LINKADDR_SIZE && *start == ':') {
+//        lladdr->u8[count-1] = (unsigned char) i;
+//        start += 1;
+//      } else if (count == LINKADDR_SIZE && *start == '\0') {
+//        lladdr->u8[count-1] = (unsigned char) i;
+//        return 1;
+//      }
+//    } else break;
+//  }
+  return 0;
+}
+
 static void
 plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
@@ -582,8 +619,8 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
     int lt = 0;   /* * link type * */
     linkaddr_t na;  /* * node address * */
 
-    char field_buf[32] = "";
-    char value_buf[32] = "";
+    char field_buf[16] = "";
+    char value_buf[16] = "";
     struct jsonparse_state js;
     jsonparse_setup(&js, (const char *)inbox_post_link, inbox_post_link_len);
     while((state = plexi_json_find_field(&js, field_buf, sizeof(field_buf)))) {
@@ -652,8 +689,9 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
       case JSON_TYPE_STRING:
         if(!strncmp(field_buf, NEIGHBORS_TNA_LABEL, sizeof(field_buf))) {
           jsonparse_copy_value(&js, value_buf, sizeof(value_buf));
-          int x = plexi_eui64_to_linkaddr(value_buf, sizeof(value_buf), &na);
-          if(!x) {
+          if(!plexi_string_to_linkaddr(value_buf, &na)) {
+//          int x = plexi_eui64_to_linkaddr(value_buf, sizeof(value_buf), &na);
+//          if(!x) {
             coap_set_status_code(response, BAD_REQUEST_4_00);
             coap_set_payload(response, "Invalid target node address", 27);
             return;

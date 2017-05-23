@@ -136,37 +136,37 @@ plexi_json_find_field(struct jsonparse_state *js, char *field_buf, int field_buf
   }
   return 0;
 }
-/* Utility function. Converts na field (string containing the lower 64bit of the IPv6) to
- * 64-bit MAC. */
-int
-plexi_eui64_to_linkaddr(const char *na_inbuf, int bufsize, linkaddr_t *linkaddress)
-{
-  int i;
-  char next_end_char = ':';
-  const char *na_inbuf_end = na_inbuf + bufsize - 1;
-  char *end;
-  unsigned val;
-  for(i = 0; i < 4; i++) {
-    if(na_inbuf >= na_inbuf_end) {
-      return 0;
-    }
-    if(i == 3) {
-      next_end_char = '\0';
-    }
-    val = (unsigned)strtoul(na_inbuf, &end, 16);
-    /* Check conversion */
-    if(end != na_inbuf && *end == next_end_char && errno != ERANGE) {
-      linkaddress->u8[2 * i] = val >> 8;
-      linkaddress->u8[2 * i + 1] = val;
-      na_inbuf = end + 1;
-    } else {
-      return 0;
-    }
-  }
-  /* We consider only links with IEEE EUI-64 identifier */
-  linkaddress->u8[0] ^= 0x02;
-  return 1;
-}
+///* Utility function. Converts na field (string containing the lower 64bit of the IPv6) to
+// * 64-bit MAC. */
+//int
+//plexi_eui64_to_linkaddr(const char *na_inbuf, int bufsize, linkaddr_t *linkaddress)
+//{
+//  int i;
+//  char next_end_char = ':';
+//  const char *na_inbuf_end = na_inbuf + bufsize - 1;
+//  char *end;
+//  unsigned val;
+//  for(i = 0; i < 4; i++) {
+//    if(na_inbuf >= na_inbuf_end) {
+//      return 0;
+//    }
+//    if(i == 3) {
+//      next_end_char = '\0';
+//    }
+//    val = (unsigned)strtoul(na_inbuf, &end, 16);
+//    /* Check conversion */
+//    if(end != na_inbuf && *end == next_end_char && errno != ERANGE) {
+//      linkaddress->u8[2 * i] = val >> 8;
+//      linkaddress->u8[2 * i + 1] = val;
+//      na_inbuf = end + 1;
+//    } else {
+//      return 0;
+//    }
+//  }
+//  /* We consider only links with IEEE EUI-64 identifier */
+//  linkaddress->u8[0] ^= 0x02;
+//  return 1;
+//}
 uint8_t
 plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {

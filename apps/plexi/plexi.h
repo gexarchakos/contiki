@@ -124,23 +124,23 @@ void plexi_reply_lladdr_if_possible(const linkaddr_t *lladdr, uint8_t *buffer, s
 uint8_t plexi_reply_ip_if_possible(const uip_ipaddr_t *addr, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
 
 
-/**
- * \brief Utility function. Converts na field (string containing the lower 64bit of the IPv6) to
- * 64-bit MAC.
- * \param na_inbuf An array of characters containing the EUI64 address. It should be null-terminated i.e. '\0'
- * \param bufsize The size of na_inbuf in number of characters
- * \param linkaddress Pointer to the linkaddr_t variable in which the result will be stored
- * \retval 0 Conversion failed
- * \retval 1 Coversion was successful
- */
-int plexi_eui64_to_linkaddr(const char *na_inbuf, int bufsize, linkaddr_t *linkaddress);
-/**
- * \brief Utility function. Converts a 64-bit MAC address to a EUI-64 IP address stored in a char array.
- * \param buf The array of characters containing the EUI64 address in hexadecimal form. It should be of no less than 20 characters long.
- * \param addr Pointer to the linkaddr_t variable which will be converted
- * \retval 0 Conversion failed
- * \retval 1 Coversion was successful
- */
+///**
+// * \brief Utility function. Converts na field (string containing the lower 64bit of the IPv6) to
+// * 64-bit MAC.
+// * \param na_inbuf An array of characters containing the EUI64 address. It should be null-terminated i.e. '\0'
+// * \param bufsize The size of na_inbuf in number of characters
+// * \param linkaddress Pointer to the linkaddr_t variable in which the result will be stored
+// * \retval 0 Conversion failed
+// * \retval 1 Coversion was successful
+// */
+//int plexi_eui64_to_linkaddr(const char *na_inbuf, int bufsize, linkaddr_t *linkaddress);
+///**
+// * \brief Utility function. Converts a 64-bit MAC address to a EUI-64 IP address stored in a char array.
+// * \param buf The array of characters containing the EUI64 address in hexadecimal form. It should be of no less than 20 characters long.
+// * \param addr Pointer to the linkaddr_t variable which will be converted
+// * \retval 0 Conversion failed
+// * \retval 1 Coversion was successful
+// */
 //int plexi_linkaddr_to_eui64(char *buf, linkaddr_t *addr);
 
 /**
