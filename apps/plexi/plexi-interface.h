@@ -72,7 +72,7 @@
 #define NEIGHBORS_ASN_LABEL "asn"
 #endif
 
-#if PLEXI_WITH_NEIGHBOR_RESOURCE || PLEXI_WITH_TSCH_RESOURCE
+#if PLEXI_WITH_NEIGHBOR_RESOURCE || PLEXI_WITH_LINK_RESOURCE
 /** \def NEIGHBORS_TNA_LABEL
  * \brief subresource URL of the neighbors EUI-64 address
  */
@@ -81,7 +81,7 @@
 
 
 /* when slotframe or link resources are enabled, slotframes' subresources are defined */
-#if PLEXI_WITH_SLOTFRAME_RESOURCE || PLEXI_WITH_TSCH_RESOURCE
+#if PLEXI_WITH_SLOTFRAME_RESOURCE || PLEXI_WITH_LINK_RESOURCE
 /** \def FRAME_RESOURCE
  * \brief URL of slotframe resource
  */
@@ -98,7 +98,7 @@
 
 
 /* when TSCH is enabled, slotframes and their two only subresources are defined */
-#if PLEXI_WITH_TSCH_RESOURCE
+#if PLEXI_WITH_LINK_RESOURCE
 #define LINK_RESOURCE "6top/cellList"
 /** \def LINK_ID_LABEL
  * \brief subresource URL of link identifier

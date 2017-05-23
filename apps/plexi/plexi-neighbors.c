@@ -48,8 +48,6 @@
  *
  */
 
-//#include "plexi-conf.h"
-
 #include "plexi-interface.h"
 
 #include "plexi.h"
@@ -142,29 +140,20 @@ void aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st valu
  * are implemented based on whether the neighbor list is periodically (PARENT_PERIODIC_RESOURCE) or event-based (PARENT_EVENT_RESOURCE) observable. Check the code.
  * \sa plexi-link-statistics.h, plexi-link-statistics.c, PARENT_PERIODIC_RESOURCE
  */
-#ifdef PLEXI_NEIGHBOR_UPDATE_INTERVAL
 PARENT_PERIODIC_RESOURCE(resource_6top_nbrs,            /* name */
                          "obs;title=\"6top neighbours\"", /* attributes */
                          plexi_get_neighbors_handler, /* GET handler */
                          NULL,      /* POST handler */
                          NULL,      /* PUT handler */
                          NULL,      /* DELETE handler */
+#ifdef PLEXI_NEIGHBOR_UPDATE_INTERVAL
                          PLEXI_NEIGHBOR_UPDATE_INTERVAL,
-                         plexi_neighbors_event_handler); /* EVENT handler */
-#else
-PARENT_EVENT_RESOURCE(resource_6top_nbrs,                 /* name */
-                      "obs;title=\"6top neighbours\"", /* attributes */
-                      plexi_get_neighbors_handler, /* GET handler */
-                      NULL,         /* POST handler */
-                      NULL,         /* PUT handler */
-                      NULL          /* DELETE handler */
-                      plexi_neighbors_event_handler); /* EVENT handler */
 #endif
+                         plexi_neighbors_event_handler); /* EVENT handler */
 
 static void
 plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset)
 {
-  plexi_reply_content_len = 0;
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {

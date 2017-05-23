@@ -66,7 +66,7 @@ extern resource_t resource_6top_slotframe;
 #endif
 
 /* activate TSCH-related module of plexi only when needed */
-#if PLEXI_WITH_TSCH_RESOURCE
+#if PLEXI_WITH_LINK_RESOURCE
 extern resource_t resource_6top_links;
 #endif
 
@@ -104,7 +104,7 @@ plexi_init()
     rest_activate_resource(&resource_6top_slotframe, FRAME_RESOURCE);
 #endif
 
-#if PLEXI_WITH_TSCH_RESOURCE
+#if PLEXI_WITH_LINK_RESOURCE
   rest_activate_resource(&resource_6top_links, LINK_RESOURCE);
 #endif
 
@@ -116,6 +116,26 @@ plexi_init()
   //plexi_queue_statistics_init(); /* initialize plexi-queue-statistics module */
 #endif
 }
+
+int
+plexi_string_to_linkaddr(char* address, unsigned int size, linkaddr_t* lladdr) {
+  char *end;
+  char *start = address;
+  unsigned int count = 0;
+  unsigned char byte;
+  while((byte = (unsigned char)strtol(start,&end,16)) && end-start < 3) {
+    count++;
+    lladdr->u8[count-1] = byte;
+    if (count < LINKADDR_SIZE && *end == ':') {
+      end++;
+    } else if (count == LINKADDR_SIZE && *end != ':') {
+      return 1;
+    }
+    start = end;
+  }
+  return 0;
+}
+
 /* Utility function for json parsing */
 int
 plexi_json_find_field(struct jsonparse_state *js, char *field_buf, int field_buf_len)

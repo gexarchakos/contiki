@@ -28,13 +28,12 @@
  */
 /**
  * \file
- *         plexi-tsch module: plexi interface for TSCH configuration (slotframes and links)
- *         - implementation file.
- *         All declarations and definitions in this file are only active iff \link PLEXI_WITH_TSCH_RESOURCE \endlink
- *         is defined and set to non-zero in plexi-conf.h
+ *         plexi-link module: plexi interface for TSCH configuration (links) - implementation file.
+ *         All declarations and definitions in this file are only active iff \link PLEXI_WITH_LINK_RESOURCE \endlink
+ *         is defined and set to non-zero
  *
  * \brief
- *         Defines the TSCH slotframe and link resources and its GET, DEL and POST handlers.
+ *         Defines the TSCH link resource and its GET, DEL and POST handlers.
  *
  * \author Georgios Exarchakos <g.exarchakos@tue.nl>
  * \author Ilker Oztelcan <i.oztelcan@tue.nl>
@@ -507,25 +506,6 @@ plexi_delete_links_handler(void *request, void *response, uint8_t *buffer, uint1
     coap_set_status_code(response, NOT_ACCEPTABLE_4_06);
     return;
   }
-}
-
-int
-plexi_string_to_linkaddr(char* address, unsigned int size, linkaddr_t* lladdr) {
-  char *end;
-  char *start = address;
-  unsigned int count = 0;
-  unsigned char byte;
-  while((byte = (unsigned char)strtol(start,&end,16)) && end-start < 3) {
-    count++;
-    lladdr->u8[count-1] = byte;
-    if (count < LINKADDR_SIZE && *end == ':') {
-      end++;
-    } else if (count == LINKADDR_SIZE && *end != ':') {
-      return 1;
-    }
-    start = end;
-  }
-  return 0;
 }
 
 static void

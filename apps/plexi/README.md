@@ -7,7 +7,7 @@
 ## Modules
 **_plexi_** consists of five modules:
 * **RPL** - every node provides read only access to the local view of the the DoDAG tree (preferred parent and children). CoAP GET and OBSERVE (event-based and periodic) operations are supported. The files of the module are `plexi-rpl.[ch]`.
-* **TSCH** - every node provides read and write access to TSCH slotframes and links. CoAP GET, POST and DELETE operations are supported. The files of the module are `plexi-tsch.[ch]`.
+* **TSCH** - every node provides read and write access to TSCH slotframes and links. CoAP GET, POST and DELETE operations are supported. The files of the module are `plexi-link.[ch]`.
 * **Neighbor list** - every node provides read only access to MAC neighborhood. CoAP GET and OBSERVE (event-based and periodic) operations are supported. The files of the module are `plexi-neighbors.[ch]`.
 * **Link statistics** - every node provides read only access to configurable link performance statistics probes. CoAP GET, POST and DELETE operations on the configuration of the statistics probes are supported. The files of the module are `plexi-link-statistics.[ch]`. The values of the statistics are retrieved via TSCH link and neighbor list resource.
 * **Queue statistics** - every node provides read only access to the size of the queue per neighbor. CoAP GET and OBSERVE (event-based and periodic) operations are supported. The files of the module are `plexi-queue-statistics.[ch]`.
@@ -24,9 +24,9 @@ To use **_plexi_** you need to set a number of C preprocessor flags and/or param
    ```
    #define PLEXI_WITH_RPL_DAG_RESOURCE 1
    ```
-   * Define `PLEXI_WITH_TSCH_RESOURCE` as `0` or `1`:
+   * Define `PLEXI_WITH_LINK_RESOURCE` as `0` or `1`:
    ```
-   #define PLEXI_WITH_TSCH_RESOURCE 1
+   #define PLEXI_WITH_LINK_RESOURCE 1
    ```
    * Define `PLEXI_WITH_NEIGHBOR_RESOURCE` as `0` or `1`, e.g.:
    ```

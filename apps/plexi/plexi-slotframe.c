@@ -28,10 +28,9 @@
  */
 /**
  * \file
- *         plexi-tsch module: plexi interface for TSCH configuration (slotframes and links)
- *         - implementation file.
- *         All declarations and definitions in this file are only active iff \link PLEXI_WITH_TSCH_RESOURCE \endlink
- *         is defined and set to non-zero in plexi-conf.h
+ *         plexi-slotframe module: plexi interface for TSCH configuration (slotframes) - implementation file.
+ *         All declarations and definitions in this file are only active iff \link PLEXI_WITH_LINK_RESOURCE \endlink
+ *         is defined and set to non-zero
  *
  * \brief
  *         Defines the TSCH slotframe and link resources and its GET, DEL and POST handlers.
