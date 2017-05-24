@@ -259,7 +259,7 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
           } else if(temp_aggregate_stats.asn > -1 && !strcmp(NEIGHBORS_ASN_LABEL, uri_subresource)) {
             found = 1;
             plexi_reply_char_if_possible('\"', buffer, &bufpos, bufsize, &strpos, offset);
-            plexi_reply_02hex_if_possible(temp_aggregate_stats.asn, buffer, &bufpos, bufsize, &strpos, offset);
+            plexi_reply_hex_if_possible(temp_aggregate_stats.asn, buffer, &bufpos, bufsize, &strpos, offset,1);
             plexi_reply_char_if_possible('\"', buffer, &bufpos, bufsize, &strpos, offset);
           } else if(base_len == uri_len) {
             found = 1;
@@ -300,7 +300,7 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
               plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
               plexi_reply_string_if_possible(NEIGHBORS_ASN_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
               plexi_reply_string_if_possible("\":\"", buffer, &bufpos, bufsize, &strpos, offset);
-              plexi_reply_02hex_if_possible(temp_aggregate_stats.asn, buffer, &bufpos, bufsize, &strpos, offset);
+              plexi_reply_hex_if_possible(temp_aggregate_stats.asn, buffer, &bufpos, bufsize, &strpos, offset,1);
               plexi_reply_char_if_possible('\"', buffer, &bufpos, bufsize, &strpos, offset);
             }
             plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
@@ -320,8 +320,20 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
     if(linkaddr_cmp(&tna, &linkaddr_null)) {
       plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
     }
-    REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-    REST.set_response_payload(response, buffer, bufpos);
+    if(bufpos > 0) {
+      /* Build the header of the reply */
+      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+      /* Build the payload of the reply */
+      REST.set_response_payload(response, buffer, bufpos);
+    } else if(strpos > 0) {
+      coap_set_status_code(response, BAD_OPTION_4_02);
+      coap_set_payload(response, "BlockOutOfScope", 15);
+    }
+    if(strpos <= *offset + bufsize) {
+      *offset = -1;
+    } else {
+      *offset += bufsize;
+    }
   } else {
     coap_set_status_code(response, NOT_ACCEPTABLE_4_06);
     return;

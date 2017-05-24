@@ -39,7 +39,12 @@
 #define WITH_TSCH_SECURITY 0
 #define TSCH_LOG_CONF_LEVEL 0
 #define PROCESS_CONF_NO_PROCESS_NAMES 1
+
+#if WITH_PLEXI
 #define WITH_COAP_RESOURCES 1
+#else
+#undef WITH_COAP_RESOURCES
+#endif
 
 #define TSCH_CONFIG_DEFAULT                  0
 #define TSCH_CONFIG_6TISCH_MINIMAL           1

@@ -655,12 +655,6 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
   }
 }
 
-void
-plexi_tsch_init()
-{
-  rest_activate_resource(&resource_6top_links, LINK_RESOURCE);
-}
-
 #if PLEXI_WITH_LINK_STATISTICS
 static void
 plexi_reply_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st value, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
@@ -679,7 +673,7 @@ plexi_reply_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st 
   plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
   if(metric == ASN) {
     plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
-    plexi_reply_02hex_if_possible((unsigned int)value, buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_hex_if_possible((unsigned int)value, buffer, &bufpos, bufsize, &strpos, offset,1);
     plexi_reply_string_if_possible("\"}", buffer, &bufpos, bufsize, &strpos, offset);
   } else if(metric == RSSI) {
     int x = value;
