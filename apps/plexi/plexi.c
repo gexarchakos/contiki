@@ -195,9 +195,12 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
     temp_hex = temp_hex>>4;
   }
   if(hex == 0)
-    hexlen = 2;
-  else if(hexlen%2 == 1)
-    hexlen++;
+    hexlen = 1;
+  unsigned int zeros = min_size_format > hexlen ? min_size_format-hexlen : 0;
+  int j;
+  for(j=0; j<zeros; j++) {
+    plexi_reply_char_if_possible('0', buffer, bufpos, bufsize, strpos, offset);
+  }
   int mask = 0;
   int i = hexlen - (int)*offset + (int)(*strpos);
   while(i>0) {
@@ -206,18 +209,11 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
     i--;
   }
   if(*strpos + hexlen > *offset) {
-    if((int)(*strpos) - (int)*offset >= 0)
-      (*bufpos) += snprintf((char *)buffer + (*bufpos),
-                       bufsize - (*bufpos) + 1,
-                       "%0*x", min_size_format,
-                       (*offset - (int32_t)(*strpos) > 0 ?
-                          hex & mask : hex));
-    else
-      (*bufpos) += snprintf((char *)buffer + (*bufpos),
-                       bufsize - (*bufpos) + 1,
-                       "%x",
-                       (*offset - (int32_t)(*strpos) > 0 ?
-                          hex & mask : hex));
+    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+                     bufsize - (*bufpos) + 1,
+                     "%x",
+                     (*offset - (int32_t)(*strpos) > 0 ?
+                        hex & mask : hex));
     if(*bufpos >= bufsize) {
       return 0;
     }
