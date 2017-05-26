@@ -198,6 +198,7 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
     hexlen = 1;
   unsigned int zeros = min_size_format > hexlen ? min_size_format-hexlen : 0;
   int j;
+  printf("1. buffer=%s, hexlen=%d, zeros=%d, bufpos=%d, strpos=%d, offset=%d\n",buffer, hexlen, zeros, *bufpos, *strpos, *offset);
   for(j=0; j<zeros; j++) {
     plexi_reply_char_if_possible('0', buffer, bufpos, bufsize, strpos, offset);
   }
@@ -208,6 +209,7 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
     mask = mask | 0xF;
     i--;
   }
+  printf("2. buffer=%s, hexlen=%d, zeros=%d, bufpos=%d, strpos=%d, offset=%d\n",buffer, hexlen, zeros, *bufpos, *strpos, *offset);
   if(*strpos + hexlen > *offset) {
     (*bufpos) += snprintf((char *)buffer + (*bufpos),
                      bufsize - (*bufpos) + 1,
@@ -215,10 +217,12 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
                      (*offset - (int32_t)(*strpos) > 0 ?
                         hex & mask : hex));
     if(*bufpos >= bufsize) {
+      printf("3. buffer=%s, hexlen=%d, zeros=%d, bufpos=%d, strpos=%d, offset=%d\n",buffer, hexlen, zeros, *bufpos, *strpos, *offset);
       return 0;
     }
   }
   *strpos += hexlen;
+  printf("4. buffer=%s, hexlen=%d, zeros=%d, bufpos=%d, strpos=%d, offset=%d\n",buffer, hexlen, zeros, *bufpos, *strpos, *offset);
   return 1;
 }
 
