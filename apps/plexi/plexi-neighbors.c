@@ -206,10 +206,12 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
       return;
     }
 #endif
-
+    printf("1. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     uint8_t found = 0;
     if(linkaddr_cmp(&tna, &linkaddr_null)) {
+      printf("2. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
       plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
+      printf("3. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     }
     uip_ds6_nbr_t *nbr;
     int first_item = 1;
@@ -222,11 +224,15 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
         if(first_item) {
           first_item = 0;
         } else if(found) {
+          printf("4. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
           plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
+          printf("5. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
         }
 
         if(!strcmp(NEIGHBORS_TNA_LABEL, uri_subresource)) {
+          printf("6. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
           plexi_reply_lladdr_if_possible(lla, buffer, &bufpos, bufsize, &strpos, offset);
+          printf("7. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
           found = 1;
         } else {
 #if PLEXI_WITH_LINK_STATISTICS
@@ -307,27 +313,37 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
           }
 #else
           if(base_len == uri_len) {
+            printf("8. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
             plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_string_if_possible(NEIGHBORS_TNA_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_string_if_possible("\":\"", buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_lladdr_if_possible(lla, buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_string_if_possible("\"}", buffer, &bufpos, bufsize, &strpos, offset);
+            printf("9. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
           }
 #endif
         }
       }
     }
+    printf("10. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     if(linkaddr_cmp(&tna, &linkaddr_null)) {
+      printf("11. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
       plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
+      printf("12. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     }
+    printf("13. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     if(bufpos > 0) {
+      printf("14. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
       /* Build the header of the reply */
       REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
       /* Build the payload of the reply */
       REST.set_response_payload(response, buffer, bufpos);
+      printf("15. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     } else if(strpos > 0) {
+      printf("16. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
       coap_set_status_code(response, BAD_OPTION_4_02);
       coap_set_payload(response, "BlockOutOfScope", 15);
+      printf("17. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     }
     if(strpos <= *offset + bufsize) {
       *offset = -1;
