@@ -96,8 +96,6 @@ plexi_init()
 
 #if PLEXI_WITH_NEIGHBOR_RESOURCE
   rest_activate_resource(&resource_6top_nbrs, NEIGHBORS_RESOURCE);
-  static struct uip_ds6_notification m;
-  uip_ds6_notification_add(&m, route_changed_callback);
 #endif
 
 #if PLEXI_WITH_SLOTFRAME_RESOURCE

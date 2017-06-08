@@ -152,6 +152,8 @@ PARENT_PERIODIC_RESOURCE(resource_6top_nbrs,            /* name */
 #endif
                          plexi_neighbors_event_handler); /* EVENT handler */
 
+int32_t local_offset = 0;
+
 static void
 plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
@@ -160,8 +162,10 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
     size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
     size_t bufpos = 0;            /* position within buffer (bytes written) */
-    if(offset == NULL)
+    if(offset == NULL) {
+      offset = &local_offset;
       *offset = 0;
+    }
     char *uri_path = NULL;
     const char *query = NULL;
     int uri_len = REST.get_url(request, (const char **)(&uri_path));
@@ -364,39 +368,39 @@ plexi_neighbors_event_handler(void)
 {
   REST.notify_subscribers(&resource_6top_nbrs);
 }
-/** \brief Wait for 30s without activity before notifying subscribers
- */
-static struct ctimer route_changed_timer;
-
-/**
- * \brief Notifies all clients who observe changes to the neighbor list resource
- */
-static void
-plexi_neighbors_changed_handler(void *ptr)
-{
-  REST.notify_subscribers(&resource_6top_nbrs);
-}
-/**
- * \brief Callback function to be called when a change to the DAG_RESOURCE resource has occurred.
- * Any change is delayed 30seconds before it is propagated to the observers.
- *
- * \bug UIP+DS6_NOTIFICATION_* do not provide a reliable way to listen to events
- */
-void
-route_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int num_routes)
-{
-  /* We have added or removed a routing entry, notify subscribers */
-  if(event == UIP_DS6_NOTIFICATION_ROUTE_ADD || event == UIP_DS6_NOTIFICATION_ROUTE_RM) {
-    PRINTF("PLEXI: notifying observers of rpl/dag resource \n");/* setting route_changed callback with 30s delay\n"); */
-    ctimer_set(&route_changed_timer, 30 * CLOCK_SECOND, plexi_neighbors_changed_handler, NULL);
-  }
-}
+///** \brief Wait for 30s without activity before notifying subscribers
+// */
+//static struct ctimer route_changed_timer;
+//
+///**
+// * \brief Notifies all clients who observe changes to the neighbor list resource
+// */
+//static void
+//plexi_neighbors_changed_handler(void *ptr)
+//{
+//  REST.notify_subscribers(&resource_6top_nbrs);
+//}
+///**
+// * \brief Callback function to be called when a change to the DAG_RESOURCE resource has occurred.
+// * Any change is delayed 30seconds before it is propagated to the observers.
+// *
+// * \bug UIP+DS6_NOTIFICATION_* do not provide a reliable way to listen to events
+// */
+//void
+//route_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int num_routes)
+//{
+//  /* We have added or removed a routing entry, notify subscribers */
+//  if(event == UIP_DS6_NOTIFICATION_ROUTE_ADD || event == UIP_DS6_NOTIFICATION_ROUTE_RM) {
+//    PRINTF("PLEXI: notifying observers of rpl/dag resource \n");/* setting route_changed callback with 30s delay\n"); */
+//    ctimer_set(&route_changed_timer, 30 * CLOCK_SECOND, plexi_neighbors_changed_handler, NULL);
+//  }
+//}
 void
 plexi_neighbors_init()
 {
   rest_activate_resource(&resource_6top_nbrs, NEIGHBORS_RESOURCE);
-  static struct uip_ds6_notification n;
-  uip_ds6_notification_add(&n, route_changed_callback);
+//  static struct uip_ds6_notification n;
+//  uip_ds6_notification_add(&n, route_changed_callback);
 }
 void
 aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value)
