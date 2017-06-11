@@ -141,7 +141,11 @@ void aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st valu
  * are implemented based on whether the neighbor list is periodically (PARENT_PERIODIC_RESOURCE) or event-based (PARENT_EVENT_RESOURCE) observable. Check the code.
  * \sa plexi-link-statistics.h, plexi-link-statistics.c, PARENT_PERIODIC_RESOURCE
  */
-PARENT_PERIODIC_RESOURCE(resource_6top_nbrs,            /* name */
+#ifdef PLEXI_NEIGHBOR_UPDATE_INTERVAL
+   PARENT_PERIODIC_RESOURCE(resource_6top_nbrs,            /* name */
+#else
+   PARENT_EVENT_RESOURCE(resource_6top_nbrs,            /* name */
+#endif
                          "obs;title=\"6top neighbours\"", /* attributes */
                          plexi_get_neighbors_handler, /* GET handler */
                          NULL,      /* POST handler */
@@ -152,7 +156,7 @@ PARENT_PERIODIC_RESOURCE(resource_6top_nbrs,            /* name */
 #endif
                          plexi_neighbors_event_handler); /* EVENT handler */
 
-int32_t local_offset = 0;
+static int32_t *local_offset = 0;
 
 static void
 plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
@@ -162,10 +166,12 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
     size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
     size_t bufpos = 0;            /* position within buffer (bytes written) */
-    if(offset == NULL) {
-      offset = &local_offset;
+
+    if(((coap_packet_t*)response)->observe == 0 && offset == NULL) {
+      offset = local_offset;
       *offset = 0;
     }
+
     char *uri_path = NULL;
     const char *query = NULL;
     int uri_len = REST.get_url(request, (const char **)(&uri_path));
@@ -211,12 +217,9 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
       return;
     }
 #endif
-    printf("1. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     uint8_t found = 0;
     if(linkaddr_cmp(&tna, &linkaddr_null)) {
-      printf("2. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
       plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
-      printf("3. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     }
     uip_ds6_nbr_t *nbr;
     int first_item = 1;
@@ -229,15 +232,11 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
         if(first_item) {
           first_item = 0;
         } else if(found) {
-          printf("4. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
           plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
-          printf("5. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
         }
 
         if(!strcmp(NEIGHBORS_TNA_LABEL, uri_subresource)) {
-          printf("6. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
           plexi_reply_lladdr_if_possible(lla, buffer, &bufpos, bufsize, &strpos, offset);
-          printf("7. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
           found = 1;
         } else {
 #if PLEXI_WITH_LINK_STATISTICS
@@ -318,37 +317,27 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
           }
 #else
           if(base_len == uri_len) {
-            printf("8. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
             plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_string_if_possible(NEIGHBORS_TNA_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_string_if_possible("\":\"", buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_lladdr_if_possible(lla, buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_string_if_possible("\"}", buffer, &bufpos, bufsize, &strpos, offset);
-            printf("9. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
           }
 #endif
         }
       }
     }
-    printf("10. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     if(linkaddr_cmp(&tna, &linkaddr_null)) {
-      printf("11. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
       plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
-      printf("12. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     }
-    printf("13. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     if(bufpos > 0) {
-      printf("14. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
       /* Build the header of the reply */
       REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
       /* Build the payload of the reply */
       REST.set_response_payload(response, buffer, bufpos);
-      printf("15. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     } else if(strpos > 0) {
-      printf("16. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
       coap_set_status_code(response, BAD_OPTION_4_02);
       coap_set_payload(response, "BlockOutOfScope", 15);
-      printf("17. NEIGHBORS buffer=%s, bufpos=%d, strpos=%d, offset=%d\n", buffer, bufpos, strpos, *offset);
     }
     if(strpos <= *offset + bufsize) {
       *offset = -1;
@@ -368,40 +357,34 @@ plexi_neighbors_event_handler(void)
 {
   REST.notify_subscribers(&resource_6top_nbrs);
 }
-///** \brief Wait for 30s without activity before notifying subscribers
-// */
-//static struct ctimer route_changed_timer;
-//
-///**
-// * \brief Notifies all clients who observe changes to the neighbor list resource
-// */
-//static void
-//plexi_neighbors_changed_handler(void *ptr)
-//{
-//  REST.notify_subscribers(&resource_6top_nbrs);
-//}
-///**
-// * \brief Callback function to be called when a change to the DAG_RESOURCE resource has occurred.
-// * Any change is delayed 30seconds before it is propagated to the observers.
-// *
-// * \bug UIP+DS6_NOTIFICATION_* do not provide a reliable way to listen to events
-// */
-//void
-//route_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int num_routes)
-//{
-//  /* We have added or removed a routing entry, notify subscribers */
-//  if(event == UIP_DS6_NOTIFICATION_ROUTE_ADD || event == UIP_DS6_NOTIFICATION_ROUTE_RM) {
-//    PRINTF("PLEXI: notifying observers of rpl/dag resource \n");/* setting route_changed callback with 30s delay\n"); */
-//    ctimer_set(&route_changed_timer, 30 * CLOCK_SECOND, plexi_neighbors_changed_handler, NULL);
-//  }
-//}
-void
-plexi_neighbors_init()
+/** \brief Wait for 30s without activity before notifying subscribers
+ */
+static struct ctimer route_changed_timer;
+
+/**
+ * \brief Notifies all clients who observe changes to the neighbor list resource
+ */
+static void
+plexi_neighbors_changed_handler(void *ptr)
 {
-  rest_activate_resource(&resource_6top_nbrs, NEIGHBORS_RESOURCE);
-//  static struct uip_ds6_notification n;
-//  uip_ds6_notification_add(&n, route_changed_callback);
+  REST.notify_subscribers(&resource_6top_nbrs);
 }
+/**
+ * \brief Callback function to be called when a change to the DAG_RESOURCE resource has occurred.
+ * Any change is delayed 30seconds before it is propagated to the observers.
+ *
+ * \bug UIP+DS6_NOTIFICATION_* do not provide a reliable way to listen to events
+ */
+void
+route_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int num_routes)
+{
+  /* We have added or removed a routing entry, notify subscribers */
+  if(event == UIP_DS6_NOTIFICATION_ROUTE_ADD || event == UIP_DS6_NOTIFICATION_ROUTE_RM) {
+    PRINTF("PLEXI: notifying observers of rpl/dag resource \n");/* setting route_changed callback with 30s delay\n"); */
+    ctimer_set(&route_changed_timer, 30 * CLOCK_SECOND, plexi_neighbors_changed_handler, NULL);
+  }
+}
+
 void
 aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value)
 {

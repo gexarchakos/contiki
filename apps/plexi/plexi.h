@@ -94,6 +94,12 @@
   resource_t name = { NULL, NULL, HAS_SUB_RESOURCES | IS_OBSERVABLE | IS_PERIODIC, attributes, get_handler, post_handler, put_handler, delete_handler, { .periodic = &periodic_##name } }; \
   periodic_resource_t periodic_##name = { NULL, &name, period, { { 0 } }, periodic_handler };
 
+/* Returns next slotframe */
+struct tsch_slotframe *tsch_schedule_get_slotframe_next(struct tsch_slotframe *sf);
+/* Returns next link of a slotframe */
+struct tsch_link* tsch_schedule_get_link_next(struct tsch_slotframe* sf, struct tsch_link* lnk);
+
+
 /**
  * \brief Utility function. Converts a string representation of L2 address to a linkaddr_t type.
  * \param address Pointer to char array of the string representation of the input address

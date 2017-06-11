@@ -57,7 +57,7 @@
 #include "JPT.h"
 #include "PeripheralRegs.h"
 
-//void vMMAC_SetChannelAndPower(uint8 u8Channel, int8 i8power);
+void vMMAC_SetChannelAndPower(uint8 u8Channel, int8 i8power);
 
 /* This driver configures the radio in PHY mode and does address decoding
  * and acknowledging in software. */

@@ -42,7 +42,19 @@
 #ifndef __PLEXI_INTERFACE_H__
 #define __PLEXI_INTERFACE_H__
 
-//#include "plexi-conf.h"
+/** \def MAC_RESOURCE
+ * \brief Local physical address resource
+ */
+#define IDS_RESOURCE "id"
+/** \def MAC_RESOURCE
+ * \brief Local physical address resource
+ */
+#define LL_ADDR_LABEL "ll"
+/** \def IP_RESOURCE
+ * \brief Local IP addresses resource
+ */
+#define IP_ADDR_LABEL "ip"
+
 
 /* when RPL module is enabled, two only subresources are defined */
 #if PLEXI_WITH_RPL_DAG_RESOURCE
