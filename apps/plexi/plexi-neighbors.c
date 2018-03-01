@@ -156,8 +156,6 @@ void aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st valu
 #endif
                          plexi_neighbors_event_handler); /* EVENT handler */
 
-static int32_t *local_offset = 0;
-
 static void
 plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint16_t bufsize, int32_t *offset)
 {
@@ -166,9 +164,9 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
   if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
     size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
     size_t bufpos = 0;            /* position within buffer (bytes written) */
-
-    if(((coap_packet_t*)response)->observe == 0 && offset == NULL) {
-      offset = local_offset;
+    int32_t local_offset = 0;
+    if(offset == NULL) {
+      offset = &local_offset;
       *offset = 0;
     }
 
