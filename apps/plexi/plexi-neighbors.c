@@ -51,7 +51,6 @@
 #include "plexi-interface.h"
 
 #include "plexi.h"
-#include "plexi-link-statistics.h"
 
 #include "er-coap-engine.h"
 #include "net/ip/uip-debug.h"
@@ -62,6 +61,10 @@
  */
 #define PLEXI_NEIGHBOR_UPDATE_INTERVAL      (10 * CLOCK_SECOND)
 #endif
+
+#if PLEXI_WITH_LINK_STATISTICS
+
+#include "plexi-link-statistics.h"
 
 struct aggregate_stats_struct {
   int rssi, lqi, etx, pdr;
@@ -76,11 +79,28 @@ struct aggregate_stats_struct {
 static struct aggregate_stats_struct temp_aggregate_stats = { .rssi = (int)0xFFFFFFFFFFFFFFFF, .lqi = -1, .etx = -1, .pdr = -1, .asn = -1, .rssi_counter = 0, .lqi_counter = 0, .asn_counter = 0, .etx_counter = 0, .pdr_counter = 0 };
 
 /**
+ * \brief Aggregates statistics metric values per link for each neighbor.
+ * \details Statistics maintained for every link with a neighbor are aggregated by this function. Values for the same metric update an exponential window moving average that will represent the value of that metric for a specific neighbor.
+ * However, NEIGHBOR_ASN_LABEL represents the latest communication received by the neighbor. Hence, EWMA is not applicable. Instead,
+ * the function replaces the old value with a newer one.
+ * The neighbor is detected via the statistics metrics identifier.
+ * \param id statistics metric identifier (see YANG model <a href="https://tools.ietf.org/html/draft-ietf-6tisch-6top-interface-04"> 6TiSCH Operation Sublayer (6top) Interface</a> and \ref plexi-link-statistics.h)
+ * \param metric the metric the values of which will be aggregated (see \ref STATS_ETX_LABEL, \ref STATS_PDR_LABEL, \ref STATS_RSSI_LABEL, \ref STATS_LQI_LABEL, \ref NEIGHBORS_ASN_LABEL)
+ * \param value the value to be aggregated with previous values on the same metric on the same neighbor
+ *
+ * \bug could metric be also retrieved by the statistics metric identifier?
+ */
+void aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value);
+
+#endif
+
+/**
  * \brief Notifies subscribers to neighbor list of any changes in the neighbor list.
  *
  * \bug The implementation does not guarantee detection of node removal or rewiring. Avoid relying on uip_ds6_nbr
  */
 static void plexi_neighbors_event_handler(void);
+
 /**
  * \brief Retrieves the list of neighbors upon a CoAP GET request to neighbor list resource.
  *
@@ -111,19 +131,6 @@ static void plexi_neighbors_event_handler(void);
  * \sa apps/rest-engine/rest-engine.h for more information on the handler signatures
  */
 static void plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint16_t preferred_size, int32_t *offset);
-/**
- * \brief Aggregates statistics metric values per link for each neighbor.
- * \details Statistics maintained for every link with a neighbor are aggregated by this function. Values for the same metric update an exponential window moving average that will represent the value of that metric for a specific neighbor.
- * However, NEIGHBOR_ASN_LABEL represents the latest communication received by the neighbor. Hence, EWMA is not applicable. Instead,
- * the function replaces the old value with a newer one.
- * The neighbor is detected via the statistics metrics identifier.
- * \param id statistics metric identifier (see YANG model <a href="https://tools.ietf.org/html/draft-ietf-6tisch-6top-interface-04"> 6TiSCH Operation Sublayer (6top) Interface</a> and \ref plexi-link-statistics.h)
- * \param metric the metric the values of which will be aggregated (see \ref STATS_ETX_LABEL, \ref STATS_PDR_LABEL, \ref STATS_RSSI_LABEL, \ref STATS_LQI_LABEL, \ref NEIGHBORS_ASN_LABEL)
- * \param value the value to be aggregated with previous values on the same metric on the same neighbor
- *
- * \bug could metric be also retrieved by the statistics metric identifier?
- */
-void aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value);
 
 /**
  * \brief Neighbor List resource to GET and OBSERVE list of neighbors. Subscribers to this resource are notified of changes and periodically.
@@ -175,7 +182,8 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
     int uri_len = REST.get_url(request, (const char **)(&uri_path));
     int base_len = 0, query_value_len = 0;
     char *uri_subresource = NULL, *query_value = NULL;
-    linkaddr_t tna = linkaddr_null;
+    linkaddr_t tna;
+    linkaddr_copy(&tna,&linkaddr_null);
 
     if(uri_len > 0) {
       *(uri_path + uri_len) = '\0';
@@ -215,7 +223,6 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
       return;
     }
 #endif
-    uint8_t found = 0;
     if(linkaddr_cmp(&tna, &linkaddr_null)) {
       plexi_reply_char_if_possible('[', buffer, &bufpos, bufsize, &strpos, offset);
     }
@@ -229,13 +236,14 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
       if(curr_next_hop != last_next_hop) {
         if(first_item) {
           first_item = 0;
-        } else if(found) {
+        } else {
           plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
         }
 
         if(!strcmp(NEIGHBORS_TNA_LABEL, uri_subresource)) {
+          plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
           plexi_reply_lladdr_if_possible(lla, buffer, &bufpos, bufsize, &strpos, offset);
-          found = 1;
+          plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
         } else {
 #if PLEXI_WITH_LINK_STATISTICS
           temp_aggregate_stats = (struct aggregate_stats_struct){.rssi = (int)0xFFFFFFFFFFFFFFFF, .lqi = -1, .etx = -1, .pdr = -1, .asn = -1, .rssi_counter = 0, .lqi_counter = 0, .asn_counter = 0, .etx_counter = 0, .pdr_counter = 0 };
@@ -249,28 +257,22 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
             slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(slotframe);
           }
           if(temp_aggregate_stats.rssi < (int)0xFFFFFFFFFFFFFFFF && !strcmp(STATS_RSSI_LABEL, uri_subresource)) {
-            found = 1;
             plexi_reply_uint16_if_possible((uint16_t)(temp_aggregate_stats.rssi / temp_aggregate_stats.rssi_counter),\
                buffer, &bufpos, bufsize, &strpos, offset);
           } else if(temp_aggregate_stats.lqi > -1 && !strcmp(STATS_LQI_LABEL, uri_subresource)) {
-            found = 1;
             plexi_reply_uint16_if_possible((uint16_t)(temp_aggregate_stats.lqi / temp_aggregate_stats.lqi_counter),\
                buffer, &bufpos, bufsize, &strpos, offset);
           } else if(temp_aggregate_stats.etx > -1 && !strcmp(STATS_ETX_LABEL, uri_subresource)) {
-            found = 1;
             plexi_reply_uint16_if_possible((uint16_t)(temp_aggregate_stats.etx / 256 / temp_aggregate_stats.etx_counter),\
                buffer, &bufpos, bufsize, &strpos, offset);
           } else if(temp_aggregate_stats.pdr > -1 && !strcmp(STATS_PDR_LABEL, uri_subresource)) {
-            found = 1;
             plexi_reply_uint16_if_possible((uint16_t)(temp_aggregate_stats.pdr / temp_aggregate_stats.pdr_counter),\
                buffer, &bufpos, bufsize, &strpos, offset);
           } else if(temp_aggregate_stats.asn > -1 && !strcmp(NEIGHBORS_ASN_LABEL, uri_subresource)) {
-            found = 1;
             plexi_reply_char_if_possible('\"', buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_hex_if_possible(temp_aggregate_stats.asn, buffer, &bufpos, bufsize, &strpos, offset,1);
             plexi_reply_char_if_possible('\"', buffer, &bufpos, bufsize, &strpos, offset);
           } else if(base_len == uri_len) {
-            found = 1;
             plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_string_if_possible(NEIGHBORS_TNA_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
             plexi_reply_string_if_possible("\":\"", buffer, &bufpos, bufsize, &strpos, offset);
@@ -347,6 +349,7 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
     return;
   }
 }
+
 /**
  * \brief Notifies periodically all clients who observe the neighbor list resource
  */
@@ -383,6 +386,8 @@ route_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int
   }
 }
 
+
+#if PLEXI_WITH_LINK_STATISTICS
 void
 aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value)
 {
@@ -423,3 +428,4 @@ aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value)
     }
   }
 }
+#endif
