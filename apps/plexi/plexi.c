@@ -132,7 +132,7 @@ plexi_string_to_linkaddr(char* address, unsigned int size, linkaddr_t* lladdr) {
   char *start = address;
   unsigned int count = 0;
   unsigned char byte;
-  while((byte = (unsigned char)strtol(start,&end,16)) && end-start < 3) {
+  while((byte = (unsigned char)strtol(start,&end,16)) || end-start==2 || end-start==1) {
     count++;
     lladdr->u8[count-1] = byte;
     if (count < LINKADDR_SIZE && *end == ':') {
