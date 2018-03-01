@@ -129,3 +129,8 @@ LOG_OPENOCD
 #CLion files
 cmake-build-debug/
 CMakeLists.txt
+.idea/
+
+#miscellaneous
+examples/5LTA0/
+apps/plexi-old/
