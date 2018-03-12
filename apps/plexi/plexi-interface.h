@@ -73,7 +73,7 @@
 #endif
 
 /* when neighbor list is enabled, two only subresources are defined */
-#if PLEXI_WITH_NEIGHBOR_RESOURCE
+#if PLEXI_WITH_NEIGHBOR_RESOURCE || PLEXI_WITH_LINK_STATISTICS
 /** \def NEIGHBORS_RESOURCE
  * \brief URL of local neighbor list resource
  */

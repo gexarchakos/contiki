@@ -90,7 +90,7 @@ static struct aggregate_stats_struct temp_aggregate_stats = { .rssi = (int)0xFFF
  *
  * \bug could metric be also retrieved by the statistics metric identifier?
  */
-void aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value);
+void aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value, void* data);
 
 #endif
 
@@ -251,7 +251,7 @@ plexi_get_neighbors_handler(void *request, void *response, uint8_t *buffer, uint
           while(slotframe) {
             struct tsch_link *link = (struct tsch_link *)tsch_schedule_get_link_next(slotframe, NULL);
             while(link) {
-              plexi_execute_over_link_stats(aggregate_statistics, link, lla);
+              plexi_execute_over_link_stats(aggregate_statistics, link, lla, NULL);
               link = (struct tsch_link *)tsch_schedule_get_link_next(slotframe, link);
             }
             slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_next(slotframe);
@@ -389,7 +389,7 @@ route_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int
 
 #if PLEXI_WITH_LINK_STATISTICS
 void
-aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value)
+aggregate_statistics(uint16_t id, uint8_t metric, plexi_stats_value_st value, void* data)
 {
   if(value != -1) {
     if(metric == RSSI) {

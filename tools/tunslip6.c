@@ -63,7 +63,7 @@
 #endif
 speed_t b_rate = BAUDRATE;
 
-int verbose = 1;
+int verbose = 2;
 const char *ipaddr;
 const char *netmask;
 int slipfd = 0;
@@ -379,6 +379,7 @@ slip_send(int fd, unsigned char c)
   if(slip_end >= sizeof(slip_buf)) {
     err(1, "slip_send overflow");
   }
+  printf("%x",c);
   slip_buf[slip_end] = c;
   slip_end++;
 }

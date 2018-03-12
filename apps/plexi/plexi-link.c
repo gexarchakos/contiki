@@ -130,8 +130,18 @@ static unsigned char inbox_post_link[MAX_DATA_LEN];
 static size_t inbox_post_link_len = 0;
 
 #if PLEXI_WITH_LINK_STATISTICS
+
+typedef struct plexi_print_struct plexi_print_state;
+struct plexi_print_struct {
+  uint8_t *buffer;
+  size_t *bufpos;
+  uint16_t bufsize;
+  size_t *strpos;
+  int32_t *offset;
+};
+
 static uint8_t first_stat = 1;
-static void plexi_reply_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st value, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset);
+static void plexi_reply_link_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st value, void* print_state);
 #endif
 
 static uint16_t new_tx_slotframe = 0;
@@ -300,6 +310,11 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
               } else {
                 plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
               }
+              plexi_print_state ps = { .buffer=buffer,\
+                .bufpos=&bufpos,\
+                .bufsize=bufsize,\
+                .strpos=&strpos,\
+                .offset=offset};
               if(!strcmp(LINK_ID_LABEL, uri_subresource)) {
                 plexi_reply_uint16_if_possible(link->handle, buffer, &bufpos, bufsize, &strpos, offset);
               } else if(!strcmp(FRAME_ID_LABEL, uri_subresource)) {
@@ -321,7 +336,7 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
               } else if(!strcmp(LINK_STATS_LABEL, uri_subresource)) {
 #if PLEXI_WITH_LINK_STATISTICS
                 first_stat = 1;
-                if(!plexi_execute_over_link_stats(plexi_reply_stats_if_possible, link, NULL)) {
+                if(!plexi_execute_over_link_stats(plexi_reply_link_stats_if_possible, link, NULL, (void*)(&ps))) {
 #endif
                 coap_set_status_code(response, NOT_FOUND_4_04);
                 coap_set_payload(response, "No specified statistics was found", 33);
@@ -339,7 +354,7 @@ plexi_get_links_handler(void *request, void *response, uint8_t *buffer, uint16_t
                 plexi_reply_string_if_possible(LINK_STATS_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
                 plexi_reply_string_if_possible("\":[", buffer, &bufpos, bufsize, &strpos, offset);
                 first_stat = 1;
-                if(plexi_execute_over_link_stats(plexi_reply_stats_if_possible, link, NULL)) {
+                if(plexi_execute_over_link_stats(plexi_reply_link_stats_if_possible, link, NULL, (void*)(&ps))) {
                   plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
                 } else {
                   bufpos = undo_bufpos;
@@ -543,7 +558,6 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
       inbox_post_link_lock = PLEXI_REQUEST_CONTENT_UNLOCKED;
       return;
     }
-    printf("\nrequest content=%s %d", request_content, request_content_len);
     /* TODO: It is assumed that the node processes the post request fast enough to return the */
     /*       response within the window assumed by client before retransmitting */
     inbox_post_link_lock = PLEXI_REQUEST_CONTENT_UNLOCKED;
@@ -657,31 +671,38 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
 
 #if PLEXI_WITH_LINK_STATISTICS
 static void
-plexi_reply_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st value, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
+plexi_reply_link_stats_if_possible(uint16_t id, uint8_t metric, plexi_stats_value_st value, void* print_state)
 {
+  plexi_print_state *ps = (plexi_print_state*)print_state;
+  uint8_t *buffer = ps->buffer;
+  size_t *bufpos = ps->bufpos;
+  uint16_t bufsize = ps->bufsize;
+  size_t *strpos = ps->strpos;
+  int32_t *offset = ps->offset;
+  
   if(!first_stat) {
-    plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_char_if_possible(',', buffer, bufpos, bufsize, strpos, offset);
   } else {
     first_stat = 0;
   }
-  plexi_reply_string_if_possible("{\"", buffer, &bufpos, bufsize, &strpos, offset);
-  plexi_reply_string_if_possible(STATS_ID_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
-  plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
-  plexi_reply_uint16_if_possible(id, buffer, &bufpos, bufsize, &strpos, offset);
-  plexi_reply_string_if_possible(",\"", buffer, &bufpos, bufsize, &strpos, offset);
-  plexi_reply_string_if_possible(STATS_VALUE_LABEL, buffer, &bufpos, bufsize, &strpos, offset);
-  plexi_reply_string_if_possible("\":", buffer, &bufpos, bufsize, &strpos, offset);
+  plexi_reply_string_if_possible("{\"", buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_string_if_possible(STATS_ID_LABEL, buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_uint16_if_possible(id, buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_string_if_possible(",\"", buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_string_if_possible(STATS_VALUE_LABEL, buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_string_if_possible("\":", buffer, bufpos, bufsize, strpos, offset);
   if(metric == ASN) {
-    plexi_reply_char_if_possible('"', buffer, &bufpos, bufsize, &strpos, offset);
-    plexi_reply_hex_if_possible((unsigned int)value, buffer, &bufpos, bufsize, &strpos, offset,1);
-    plexi_reply_string_if_possible("\"}", buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_char_if_possible('"', buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_hex_if_possible((unsigned int)value, buffer, bufpos, bufsize, strpos, offset,1);
+    plexi_reply_string_if_possible("\"}", buffer, bufpos, bufsize, strpos, offset);
   } else if(metric == RSSI) {
     int x = value;
-    plexi_reply_uint16_if_possible((unsigned int)x, buffer, &bufpos, bufsize, &strpos, offset);
-    plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_uint16_if_possible((unsigned int)x, buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_char_if_possible('}', buffer, bufpos, bufsize, strpos, offset);
   } else {
-    plexi_reply_uint16_if_possible((unsigned int)value, buffer, &bufpos, bufsize, &strpos, offset);
-    plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
+    plexi_reply_uint16_if_possible((unsigned int)value, buffer, bufpos, bufsize, strpos, offset);
+    plexi_reply_char_if_possible('}', buffer, bufpos, bufsize, strpos, offset);
   }
 }
 #endif
