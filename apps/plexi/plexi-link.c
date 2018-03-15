@@ -581,16 +581,19 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
         if(slotframe) {
           new_tx_timeslot = so;
           new_tx_slotframe = fd;
+          PRINTLLADDR((const uip_lladdr_t *)&na);
           if((link = (struct tsch_link *)tsch_schedule_add_link(slotframe, (uint8_t)lo, lt, &na, (uint16_t)so, (uint16_t)co))) {
-            PRINTF("PLEXI: added {\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u", \
+            plexi_reply_link_if_possible(link, buffer, &bufpos, bufsize, &strpos, offset); 
+            plexi_reply_tna_if_possible(&na, buffer, &bufpos, bufsize, &strpos, offset);
+/*            PRINTF("PLEXI: added {\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u,\"%s\":%u", \
                    LINK_ID_LABEL, link->handle, FRAME_ID_LABEL, fd, LINK_SLOT_LABEL, so, \
                    LINK_CHANNEL_LABEL, co, LINK_OPTION_LABEL, lo, LINK_TYPE_LABEL, lt);
-            if(!linkaddr_cmp(&na, &linkaddr_null)) {
+            if(!linkaddr_cmp(&na, &linkaddr_null)) {              
               PRINTF(",\"%s\":\"", NEIGHBORS_TNA_LABEL);
               PRINTLLADDR((const uip_lladdr_t *)&na);
               PRINTF("\"");
-            }
-            PRINTF("}\n");
+            }*/
+            plexi_reply_char_if_possible('}', buffer, &bufpos, bufsize, &strpos, offset);
             /* * Update response * */
             if(!first_item) {
               plexi_reply_char_if_possible(',', buffer, &bufpos, bufsize, &strpos, offset);
@@ -625,7 +628,6 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
         }
         break;
       case JSON_TYPE_STRING:
-        printf("\njson=%s",js.json);
         if(!strncmp(field_buf, NEIGHBORS_TNA_LABEL, sizeof(field_buf))) {
           jsonparse_copy_value(&js, value_buf, sizeof(value_buf));
           if(!plexi_string_to_linkaddr(value_buf, sizeof(value_buf), &na)) {
