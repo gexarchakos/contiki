@@ -243,4 +243,8 @@
 #include "common-conf-jn516x.h"
 #endif /* CONTIKI_TARGET_JN516X */
 
+#if CONTIKI_TARGET_MINIMAL-NET
+#include "common-conf-z1.h"
+#endif /* CONTIKI_TARGET_MINIMAL-NET */
+
 #endif /* __COMMON_CONF_H__ */

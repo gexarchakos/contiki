@@ -132,16 +132,20 @@ plexi_string_to_linkaddr(char* address, unsigned int size, linkaddr_t* lladdr) {
   char *start = address;
   unsigned int count = 0;
   unsigned char byte;
+  printf("address=%s, size=%d#\n", address,size);
   while((byte = (unsigned char)strtol(start,&end,16)) || end-start==2 || end-start==1) {
     count++;
     lladdr->u8[count-1] = byte;
+    printf("u8[%d]=%2x\n", count-1,lladdr->u8[count-1]);
     if (count < LINKADDR_SIZE && *end == ':') {
       end++;
     } else if (count == LINKADDR_SIZE && *end != ':') {
+      printf("##\n");
       return 1;
     }
     start = end;
   }
+  printf("##\n");
   return 0;
 }
 
@@ -278,9 +282,9 @@ void
 plexi_reply_lladdr_if_possible(const linkaddr_t *lladdr, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
 #if LINKADDR_SIZE == 2
-    plexi_reply_hex_if_possible((unsigned int)((*lladdr)&0xFF), buffer, bufpos, bufsize, strpos, offset,2);
+    plexi_reply_hex_if_possible((unsigned int)(lladdr->u16 & 0xFF), buffer, bufpos, bufsize, strpos, offset,2);
     plexi_reply_char_if_possible(':', buffer, bufpos, bufsize, strpos, offset);
-    plexi_reply_hex_if_possible((unsigned int)(((*lladdr)>>8)&0xFF), buffer, bufpos, bufsize, strpos, offset,2);
+    plexi_reply_hex_if_possible((unsigned int)((lladdr->u16>>8) & 0xFF), buffer, bufpos, bufsize, strpos, offset,2);
 #else
   unsigned int i;
   for(i = 0; i < LINKADDR_SIZE; i++) {

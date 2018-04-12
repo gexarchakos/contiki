@@ -1,0 +1,11 @@
+#!/bin/bash
+
+cd ~/Documents/contiki-plexi/examples/plexi-rpl-tsch/border-router
+make TARGET=$1 clean
+make TARGET=$1
+scp border-router.jn516x.bin debian@192.168.7.2:/home/debian
+cd ~/Documents/contiki-plexi/examples/plexi-rpl-tsch/node
+make TARGET=$1 clean
+make TARGET=$1
+scp node.jn516x.bin debian@192.168.7.2:/home/debian
+cd ~/Documents/contiki-plexi/examples/plexi-rpl-tsch
