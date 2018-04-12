@@ -42,7 +42,7 @@
 #include "apps/plexi/plexi.h"
 #endif
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -54,7 +54,6 @@ AUTOSTART_PROCESSES(&node_process);
 PROCESS_THREAD(node_process, ev, data)
 {
   static struct etimer et;
-  printf("node started\n");
   PROCESS_BEGIN();
 
   /* 3 possible roles:

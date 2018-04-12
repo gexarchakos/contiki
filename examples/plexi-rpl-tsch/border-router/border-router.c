@@ -35,7 +35,7 @@
 #include "apps/plexi/plexi.h"
 #endif
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 
 static uip_ipaddr_t prefix;

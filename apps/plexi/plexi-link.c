@@ -628,20 +628,26 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
       }
     }
     plexi_reply_char_if_possible(']', buffer, &bufpos, bufsize, &strpos, offset);
-    if(bufpos > 0) {
-      /* Build the header of the reply */
-      REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
-      /* Build the payload of the reply */
-      printf("buffer=%s\n",buffer);
-      REST.set_response_payload(response, buffer, bufpos);
-    } else if(strpos > 0) {
-      coap_set_status_code(response, BAD_OPTION_4_02);
-      coap_set_payload(response, "BlockOutOfScope", 15);
-    }
-    if(strpos <= *offset + bufsize) {
-      *offset = -1;
+    /* Check if json parsing succeeded */
+    if(js.error == JSON_ERROR_OK) {
+      if(bufpos > 0) {
+        /* Build the header of the reply */
+        REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
+        /* Build the payload of the reply */
+        //printf("buffer=%s\n",buffer);
+        REST.set_response_payload(response, buffer, bufpos);
+      } else if(strpos > 0) {
+        coap_set_status_code(response, BAD_OPTION_4_02);
+        coap_set_payload(response, "BlockOutOfScope", 15);
+      }
+      if(strpos <= *offset + bufsize) {
+        *offset = -1;
+      } else {
+        *offset += bufsize;
+      }
     } else {
-      *offset += bufsize;
+      coap_set_status_code(response, BAD_REQUEST_4_00);
+      coap_set_payload(response, "Can only support JSON payload format", 36);
     }
   } else {
     coap_set_status_code(response, NOT_ACCEPTABLE_4_06);
