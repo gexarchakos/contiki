@@ -49,6 +49,9 @@
 #include <stdarg.h>
 #include <errno.h>
 
+#define DEBUG DEBUG_PRINT
+#include "net/ip/uip-debug.h"
+
 /* activate ID-related module of plexi only when needed */
 #if PLEXI_WITH_ID_RESOURCE
 extern resource_t resource_ids;
@@ -88,37 +91,43 @@ extern resource_t resource_6top_links;
 void
 plexi_init()
 {
-  printf("PLEXI: initializing scheduler interface\n");
+  PRINTF("PLEXI: initializing scheduler interface modules:\n");
 
   /* Initialize CoAP service */
   rest_init_engine();
 
 #if PLEXI_WITH_ID_RESOURCE
   rest_activate_resource(&resource_ids, IDS_RESOURCE);
+  PRINTF("  * L2 & L3 addresses resource\n");
 #endif
 
 #if PLEXI_WITH_RPL_DAG_RESOURCE
   rest_activate_resource(&resource_rpl_dag, DAG_RESOURCE);
   static struct uip_ds6_notification n;
   uip_ds6_notification_add(&n, rpl_changed_callback);
+  PRINTF("  * RPL resource\n");
 #endif
 
 #if PLEXI_WITH_NEIGHBOR_RESOURCE
   rest_activate_resource(&resource_6top_nbrs, NEIGHBORS_RESOURCE);
   static struct uip_ds6_notification m;
   uip_ds6_notification_add(&m, route_changed_callback);
+  PRINTF("  * Neighbor list resource\n");
 #endif
 
 #if PLEXI_WITH_SLOTFRAME_RESOURCE
-    rest_activate_resource(&resource_6top_slotframe, FRAME_RESOURCE);
+  rest_activate_resource(&resource_6top_slotframe, FRAME_RESOURCE);
+  PRINTF("  * TSCH slotframe resource\n");
 #endif
 
 #if PLEXI_WITH_LINK_RESOURCE
   rest_activate_resource(&resource_6top_links, LINK_RESOURCE);
+  PRINTF("  * TSCH links resource\n");
 #endif
 
 #if PLEXI_WITH_LINK_STATISTICS
   plexi_link_statistics_init(); /* initialize plexi-link-statistics module */
+  PRINTF("  * TSCH link statistics resource\n");
 #endif
 
 #if PLEXI_WITH_QUEUE_STATISTICS
@@ -132,20 +141,16 @@ plexi_string_to_linkaddr(char* address, unsigned int size, linkaddr_t* lladdr) {
   char *start = address;
   unsigned int count = 0;
   unsigned char byte;
-  printf("address=%s, size=%d#\n", address,size);
   while((byte = (unsigned char)strtol(start,&end,16)) || end-start==2 || end-start==1) {
     count++;
     lladdr->u8[count-1] = byte;
-    printf("u8[%d]=%2x\n", count-1,lladdr->u8[count-1]);
     if (count < LINKADDR_SIZE && *end == ':') {
       end++;
     } else if (count == LINKADDR_SIZE && *end != ':') {
-      printf("##\n");
       return 1;
     }
     start = end;
   }
-  printf("##\n");
   return 0;
 }
 

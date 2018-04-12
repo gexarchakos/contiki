@@ -50,6 +50,7 @@
 
 #define UIP_IP_BUF        ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 
+#undef DEBUG
 #define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
 

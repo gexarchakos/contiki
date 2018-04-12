@@ -634,7 +634,6 @@ plexi_post_links_handler(void *request, void *response, uint8_t *buffer, uint16_
         /* Build the header of the reply */
         REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
         /* Build the payload of the reply */
-        //printf("buffer=%s\n",buffer);
         REST.set_response_payload(response, buffer, bufpos);
       } else if(strpos > 0) {
         coap_set_status_code(response, BAD_OPTION_4_02);

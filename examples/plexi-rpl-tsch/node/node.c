@@ -64,7 +64,7 @@ PROCESS_THREAD(node_process, ev, data)
   static enum { role_6ln, role_6dr } node_role;
   node_role = role_6ln;
 
-  printf("Init: node starting with role %s\n",
+  PRINTF("Init: node starting with role %s\n",
          node_role == role_6ln ? "6ln" : "6dr");
 
   is_coordinator = node_role > role_6ln;
