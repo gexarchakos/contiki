@@ -136,10 +136,7 @@ int plexi_set_statistics_window(plexi_stats *stats, uint16_t window);
 void plexi_purge_statistics(plexi_stats *stats);
 void plexi_update_ewma_statistics(uint8_t metric, void *old_value, plexi_stats_value_t new_value);
 
-void plexi_printubin(plexi_stats_value_t a);
-void plexi_printsbin(plexi_stats_value_st a);
-
-uint8_t plexi_execute_over_link_stats(void (*callback)(uint16_t, uint8_t, plexi_stats_value_st, void*), struct tsch_link *link, linkaddr_t *target, void* other);
+																																				uint8_t plexi_execute_over_link_stats(void (*callback)(uint16_t, uint8_t, plexi_stats_value_st, void*), struct tsch_link *link, linkaddr_t *target, void* other);
 
 void plexi_link_statistics_init();
 

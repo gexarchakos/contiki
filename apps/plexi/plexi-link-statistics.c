@@ -1078,51 +1078,6 @@ plexi_execute_over_link_stats( \
     return 0;
   }
 }
-/*
-   plexi_stats_value_st plexi_get_stats_value_from_target(plexi_stats *stats_list, uint8_t metric, linkaddr_t target) {
-
-    plexi_stats_value_st value = -1;
-    while(stats_list) {
-   if(linkaddr_cmp(lla, &link->addr))
-                    value = (plexi_stats_value_st)stats->value;
-   #if !PLEXI_DENSE_LINK_STATISTICS
-                  else if(memb_inmemb(&plexi_enhanced_stats_mem, list_head(stats->enhancement))) {
-                    plexi_enhanced_stats * es;
-                    for(es = list_head(stats->enhancement); es!=NULL; es = list_item_next(es)) {
-                      if(linkaddr_cmp(lla, &es->target)) {
-                        value = (plexi_stats_value_st)es->value;
-                        break;
-                      }
-                    }
-                  }
-   }
- */
-void
-plexi_printubin(plexi_stats_value_t a)
-{
-  char buf[128];
-  int i = 0;
-  for(i = 8 * sizeof(plexi_stats_value_t) - 1; i >= 0; i--) {
-    buf[i] = (a & 1) + '0';
-    a >>= 1;
-  }
-  for(i = 0; i < 8 * sizeof(plexi_stats_value_t); i++) {
-    printf("%c", buf[i]);
-  }
-}
-void
-plexi_printsbin(plexi_stats_value_st a)
-{
-  char buf[128];
-  int i = 0;
-  for(i = 8 * sizeof(plexi_stats_value_t) - 1; i >= 0; i--) {
-    buf[i] = (a & 1) + '0';
-    a >>= 1;
-  }
-  for(i = 0; i < 8 * sizeof(plexi_stats_value_t); i++) {
-    printf("%c", buf[i]);
-  }
-}
 
 void
 plexi_packet_received(void)
