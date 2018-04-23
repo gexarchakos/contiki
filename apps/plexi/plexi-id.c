@@ -173,7 +173,7 @@ plexi_get_ids_handler(void *request, void *response, uint8_t *buffer, uint16_t b
       coap_set_status_code(response, BAD_OPTION_4_02);
       coap_set_payload(response, "BlockOutOfScope", 15);
     }
-    if(strpos <= *offset + bufsize) {
+    if(strpos < *offset + bufsize) {
       *offset = -1;
     } else {
       *offset += bufsize;

@@ -48,9 +48,16 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <errno.h>
+#include "net/rime/rime.h"
 
-#define DEBUG DEBUG_PRINT
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
+
+void plexi_packet_received(void);
+void plexi_packet_sent(int mac_status);
+
+RIME_SNIFFER(plexi_sniffer, plexi_packet_received, plexi_packet_sent);
+
 
 /* activate ID-related module of plexi only when needed */
 #if PLEXI_WITH_ID_RESOURCE
@@ -60,6 +67,8 @@ extern resource_t resource_ids;
 /* activate RPL-related module of plexi only when needed */
 #if PLEXI_WITH_RPL_DAG_RESOURCE
 extern resource_t resource_rpl_dag;
+extern void plexi_rpl_packet_received(void);
+extern void plexi_rpl_init();
 #endif
 
 /* activate neighbor list monitoring module of plexi only when needed */
@@ -88,9 +97,25 @@ extern resource_t resource_6top_links;
 #include "plexi-queue-statistics.h"
 #endif
 
+
+void
+plexi_packet_received(void)
+{
+#if PLEXI_WITH_RPL_DAG_RESOURCE
+  plexi_rpl_packet_received();
+#endif
+}
+
+void
+plexi_packet_sent(int mac_status)
+{
+}
+
 void
 plexi_init()
 {
+  
+  rime_sniffer_add(&plexi_sniffer);
   PRINTF("PLEXI: initializing scheduler interface modules:\n");
 
   /* Initialize CoAP service */
@@ -106,6 +131,7 @@ plexi_init()
   static struct uip_ds6_notification n;
   uip_ds6_notification_add(&n, rpl_changed_callback);
   PRINTF("  * RPL resource\n");
+  plexi_rpl_init();
 #endif
 
 #if PLEXI_WITH_NEIGHBOR_RESOURCE
@@ -181,7 +207,7 @@ plexi_reply_char_if_possible(char c, uint8_t *buffer, size_t *bufpos, uint16_t b
   if(*strpos >= *offset && *bufpos < bufsize) {
     buffer[(*bufpos)++] = c;
   }
-  ++(*strpos);
+  ++(*strpos); 
   return 1;
 }
 
@@ -189,18 +215,20 @@ uint8_t
 plexi_reply_string_if_possible(char *s, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
   if(*strpos + strlen(s) > *offset) {
-    (*bufpos) += snprintf((char*)buffer + (unsigned int)(*bufpos),
+    uint8_t n = snprintf((char*)buffer + (unsigned int)(*bufpos),
                        (unsigned int)bufsize - (unsigned int)(*bufpos) + 1,
                        "%s",
                        s
                        + (*offset - (int32_t)(*strpos) > 0 ?
                           *offset - (int32_t)(*strpos) : 0));
+    *bufpos += n;
     if(*bufpos >= bufsize) {
-      return 0;
-    }
+      *strpos += n;
+      return 0; 
+    } 
   }
-  *strpos += strlen(s);
-  return 1;
+  *strpos += strlen(s); 
+  return 1; 
 }
 
 uint8_t
@@ -227,17 +255,21 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
     i--;
   }
   if(*strpos + hexlen > *offset) {
-    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+    uint8_t n = snprintf((char *)buffer + (*bufpos),
                      bufsize - (*bufpos) + 1,
-                     "%x",
+                     "%0*x",
+                     (*offset - (int32_t)(*strpos) > 0 ?
+                        hexlen - (int)*offset + (int)(*strpos) : hexlen),
                      (*offset - (int32_t)(*strpos) > 0 ?
                         hex & mask : hex));
+    *bufpos += n;
     if(*bufpos >= bufsize) {
-      return 0;
-    }
+      *strpos += n;
+      return 0; 
+    } 
   }
-  *strpos += hexlen;
-  return 1;
+  *strpos += hexlen; 
+  return 1; 
 }
 
 uint32_t
@@ -270,17 +302,19 @@ plexi_reply_uint16_if_possible(uint16_t d, uint8_t *buffer, size_t *bufpos, uint
     temp_d /= 10;
   }
   if(*strpos + len > *offset) {
-    (*bufpos) += snprintf((char *)buffer + (*bufpos),
+    uint8_t n = snprintf((char *)buffer + (*bufpos),
                        bufsize - (*bufpos) + 1,
                        "%"PRIu16,
                        (*offset - (int32_t)(*strpos) > 0 ?
                           (uint16_t)d % (uint16_t)embedded_pow10(len - *offset + (int32_t)(*strpos)) : (uint16_t)d));
+    *bufpos += n;
     if(*bufpos >= bufsize) {
-      return 0;
-    }
+      *strpos += n;
+      return 0; 
+    } 
   }
   *strpos += len;
-  return 1;
+  return 1; 
 }
 
 void

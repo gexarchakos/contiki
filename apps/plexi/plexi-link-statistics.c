@@ -1108,6 +1108,7 @@ plexi_packet_sent(int mac_status)
 {
 #if TSCH_WITH_LINK_STATISTICS
   if(mac_status == MAC_TX_OK && packetbuf_attr(PACKETBUF_ATTR_MAC_ACK)) {
+    printf("### packet was sent ###");
     struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_by_handle((uint16_t)packetbuf_attr(PACKETBUF_ATTR_TSCH_SLOTFRAME));
     uint16_t slotoffset = (uint16_t)packetbuf_attr(PACKETBUF_ATTR_TSCH_TIMESLOT);
     struct tsch_link *link = (struct tsch_link *)tsch_schedule_get_link_by_timeslot(slotframe, slotoffset);

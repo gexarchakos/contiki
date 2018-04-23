@@ -48,7 +48,7 @@
 #define COAP_CONF_MAX_OBSERVEES 1
 
 #undef REST_MAX_CHUNK_SIZE
-#define REST_MAX_CHUNK_SIZE      20
+#define REST_MAX_CHUNK_SIZE      30
 
 /* Queues */
 #undef QUEUEBUF_CONF_NUM

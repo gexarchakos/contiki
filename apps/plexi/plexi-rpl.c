@@ -53,18 +53,35 @@
 
 #include "er-coap-engine.h"
 #include "net/rpl/rpl.h"
+#include "net/ipv6/uip-ds6-route.h"
 
 #include "plexi.h"
+
+ #include "sys/etimer.h"
+
+#define DEBUG DEBUG_NONE
 #include "net/ip/uip-debug.h"
+
+#define ACTUAL_ROUTES_NUM UIP_DS6_ROUTE_NB
 
 #ifndef PLEXI_RPL_UPDATE_INTERVAL
 /**
  * \brief Time distance between a change in RPL DoDAG and the notification sent to subscribers
  */
-#define PLEXI_RPL_UPDATE_INTERVAL (30 * CLOCK_SECOND)
+#define PLEXI_RPL_UPDATE_INTERVAL 30
 #endif
 
+typedef struct plexi_actual_route_struct plexi_actual_route;
+struct plexi_actual_route_struct {
+  uip_ipaddr_t route;
+  long last_seen;
+};
 
+PROCESS(blabla, "RPL Route Removed");
+
+plexi_actual_route actual_routes[ACTUAL_ROUTES_NUM];
+
+void plexi_rpl_packet_received(void);
 
 /** \brief
  *         Retrieves the preferred parent and direct children of a node in a RPL DoDAG
@@ -138,7 +155,8 @@ plexi_get_dag_handler(void *request,
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
   /* make sure the request accepts JSON reply or does not specify the reply type */
-  if(accept == -1 || accept == REST.type.APPLICATION_JSON) {
+  if(accept == -1 || accept == REST.type.APPLICATION_JSON)
+  {
     plexi_reply_char_if_possible('{', buffer, &bufpos, preferred_size, &strpos, offset);
     uip_ds6_defrt_t *default_route = uip_ds6_defrt_lookup(uip_ds6_defrt_choose());
     if(default_route)
@@ -165,19 +183,28 @@ plexi_get_dag_handler(void *request,
     plexi_reply_string_if_possible("\":[", buffer, &bufpos, preferred_size, &strpos, offset);
     
     uip_ds6_route_t *route;
+    int first_item = 1;
     for(route = uip_ds6_route_head(); route; route = uip_ds6_route_next(route))
     {
-      if(route != uip_ds6_route_head())
+      uint8_t i=0;
+      for(i = 0; i<ACTUAL_ROUTES_NUM; i++)
       {
-        plexi_reply_char_if_possible(',', buffer, &bufpos, preferred_size, &strpos, offset);
+        if(uip_ipaddr_cmp(uip_ds6_route_nexthop(route),&actual_routes[i].route) && actual_routes[i].last_seen != -1)
+        {
+          if(!first_item) {
+            plexi_reply_char_if_possible(',', buffer, &bufpos, preferred_size, &strpos, offset);
+          }
+          plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_ip_if_possible(&route->ipaddr, buffer, &bufpos, preferred_size, &strpos, offset);
+          plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
+          first_item = 0;
+          break;
+        }
       }
-      plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
-      plexi_reply_ip_if_possible(&route->ipaddr, buffer, &bufpos, preferred_size, &strpos, offset);
-      plexi_reply_char_if_possible('"', buffer, &bufpos, preferred_size, &strpos, offset);
       if(bufpos > preferred_size && strpos - bufpos > *offset) {
         break;
       }
-    }
+    }	
 
 
     plexi_reply_string_if_possible("]}", buffer, &bufpos, preferred_size, &strpos, offset);
@@ -191,7 +218,7 @@ plexi_get_dag_handler(void *request,
       coap_set_status_code(response, BAD_OPTION_4_02);
       coap_set_payload(response, "BlockOutOfScope", 15);
     }
-    if(strpos <= *offset + preferred_size) {
+    if(strpos < *offset + preferred_size) {
       *offset = -1;
     } else {
       *offset += preferred_size;
@@ -219,13 +246,73 @@ rpl_changed_callback(int event, uip_ipaddr_t *route, uip_ipaddr_t *ipaddr, int n
 {
   /* We have added or removed a routing entry, notify subscribers */
   if(event == UIP_DS6_NOTIFICATION_ROUTE_ADD || event == UIP_DS6_NOTIFICATION_ROUTE_RM) {
-    ctimer_set(&rpl_changed_timer, PLEXI_RPL_UPDATE_INTERVAL, plexi_rpl_changed_handler, NULL);
+    ctimer_set(&rpl_changed_timer, PLEXI_RPL_UPDATE_INTERVAL * CLOCK_SECOND, plexi_rpl_changed_handler, NULL);
   }
 }
+
+
+void plexi_rpl_packet_received(void){
+  uip_ipaddr_t from;
+  uip_ipaddr_copy(&from, &UIP_IP_BUF->srcipaddr);
+  uint8_t i=0;
+  uint8_t updated = 0;
+  for(i = 0; i<ACTUAL_ROUTES_NUM; i++)
+  {
+    if(uip_ipaddr_cmp(&actual_routes[i].route, &from))
+    {
+	actual_routes[i].last_seen = clock_seconds();
+        updated = 1;
+        break;
+    }
+  }
+  if(!updated)
+  {
+    for(i = 0; i<ACTUAL_ROUTES_NUM; i++)
+    {
+      if(actual_routes[i].last_seen == -1)
+      {
+        uip_ipaddr_copy(&actual_routes[i].route,&from);
+	actual_routes[i].last_seen = clock_seconds();
+        break;
+      }
+    }
+  }
+}
+
+ 
+PROCESS_THREAD(blabla, ev, data)
+{
+  static struct etimer et;
+  PROCESS_BEGIN();
+ 
+  /* Delay 1 second */
+  etimer_set(&et, CLOCK_SECOND);
+
+  uint8_t i = 0;
+  for(i = 0; i<ACTUAL_ROUTES_NUM; i++)
+  {
+    actual_routes[i].last_seen = -1;
+  }
+
+  while(1) {
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+    /* Reset the etimer to trig again in PLEXI_RPL_UPDATE_INTERVAL seconds */
+    etimer_reset(&et);
+    /* ... */
+    for(i = 0; i<ACTUAL_ROUTES_NUM; i++)
+    {
+      if(actual_routes[i].last_seen < clock_seconds() - PLEXI_RPL_UPDATE_INTERVAL)
+      {
+        actual_routes[i].last_seen = -1;
+        plexi_dag_event_handler();
+      }
+    }
+  }
+  PROCESS_END();
+}
+
 void
 plexi_rpl_init()
 {
-  rest_activate_resource(&resource_rpl_dag, DAG_RESOURCE);
-  static struct uip_ds6_notification n;
-  uip_ds6_notification_add(&n, rpl_changed_callback);
+  process_start(&blabla, NULL);
 }
