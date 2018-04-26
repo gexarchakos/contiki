@@ -248,23 +248,37 @@ plexi_reply_hex_if_possible(unsigned int hex, uint8_t *buffer, size_t *bufpos, u
     plexi_reply_char_if_possible('0', buffer, bufpos, bufsize, strpos, offset);
   }
   int mask = 0;
-  int i = hexlen - (int)*offset + (int)(*strpos);
+  int mask_size = hexlen - (int)*offset + (int)(*strpos);
+  int i = mask_size;
   while(i>0) {
     mask = mask<<4;
     mask = mask | 0xF;
     i--;
   }
   if(*strpos + hexlen > *offset) {
-    uint8_t n = snprintf((char *)buffer + (*bufpos),
+    if(mask_size < hexlen) {
+      unsigned int h = mask & hex;
+      int hlen = 0;
+      unsigned int temp_h = h;
+      while(temp_h > 0) {
+        hlen++;
+        temp_h = temp_h>>4;
+      }
+      if(h == 0)
+        hlen = 1;
+      if(hlen < mask_size) {
+        int j=0;
+        for(j=0; j<mask_size-hlen; j++) {
+          buffer[(*bufpos)++] = '0';
+        }
+      }
+    }
+    *bufpos += snprintf((char *)buffer + (*bufpos),
                      bufsize - (*bufpos) + 1,
-                     "%0*x",
+                     "%x",
                      (*offset - (int32_t)(*strpos) > 0 ?
-                        hexlen - (int)*offset + (int)(*strpos) : hexlen),
-                     (*offset - (int32_t)(*strpos) > 0 ?
-                        hex & mask : hex));
-    *bufpos += n;
+                        hex & mask : hex));  
     if(*bufpos >= bufsize) {
-      *strpos += n;
       return 0; 
     } 
   }
@@ -321,9 +335,9 @@ void
 plexi_reply_lladdr_if_possible(const linkaddr_t *lladdr, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
 #if LINKADDR_SIZE == 2
-    plexi_reply_hex_if_possible((unsigned int)(lladdr->u16 & 0xFF), buffer, bufpos, bufsize, strpos, offset,2);
-    plexi_reply_char_if_possible(':', buffer, bufpos, bufsize, strpos, offset);
-    plexi_reply_hex_if_possible((unsigned int)((lladdr->u16>>8) & 0xFF), buffer, bufpos, bufsize, strpos, offset,2);
+  plexi_reply_hex_if_possible((unsigned int)(lladdr->u16 & 0xFF), buffer, bufpos, bufsize, strpos, offset,2);
+  plexi_reply_char_if_possible(':', buffer, bufpos, bufsize, strpos, offset);
+  plexi_reply_hex_if_possible((unsigned int)((lladdr->u16>>8) & 0xFF), buffer, bufpos, bufsize, strpos, offset,2);
 #else
   unsigned int i;
   for(i = 0; i < LINKADDR_SIZE; i++) {
@@ -338,6 +352,8 @@ plexi_reply_lladdr_if_possible(const linkaddr_t *lladdr, uint8_t *buffer, size_t
 uint8_t
 plexi_reply_ip_if_possible(const uip_ipaddr_t *addr, uint8_t *buffer, size_t *bufpos, uint16_t bufsize, size_t *strpos, int32_t *offset)
 {
+  if(*bufpos >= bufsize)
+    return 0;
 #if NETSTACK_CONF_WITH_IPV6
   uint16_t a;
   unsigned int i;

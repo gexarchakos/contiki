@@ -223,6 +223,7 @@ plexi_get_dag_handler(void *request,
     } else {
       *offset += preferred_size;
     }
+    printf ("### offset=%d\n",*offset);
   } else { /* if the client accepts a response payload format other than json, return 406 */
     coap_set_status_code(response, NOT_ACCEPTABLE_4_06);
     return;
