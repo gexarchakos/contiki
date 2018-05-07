@@ -91,7 +91,7 @@ struct input_packet {
   int len; /* Packet len */
   uint16_t rssi; /* RSSI for this packet */
 
-#if TSCH_WITH_LINK_STATISTICS
+#if TSCH_WITH_LINK_STATISTICS || TSCH_LOG_CONF_LEVEL
   uint16_t lqi; /* LQI for this packet */
   uint16_t slotoffset; /* slotoffset this packet was received on */ 
   uint16_t channeloffset; /* channeloffset this packet was received on */

@@ -59,7 +59,7 @@
 
  #include "sys/etimer.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_FULL
 #include "net/ip/uip-debug.h"
 
 #define ACTUAL_ROUTES_NUM UIP_DS6_ROUTE_NB
@@ -76,6 +76,8 @@ struct plexi_actual_route_struct {
   uip_ipaddr_t route;
   long last_seen;
 };
+
+uint8_t new_notification = 0;
 
 PROCESS(blabla, "RPL Route Removed");
 
@@ -149,14 +151,18 @@ plexi_get_dag_handler(void *request,
                       uint16_t preferred_size,
                       int32_t *offset)
 {
-  size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
-  size_t bufpos = 0;            /* position within buffer (bytes written) */
   
   unsigned int accept = -1;
   REST.get_header_accept(request, &accept);
   /* make sure the request accepts JSON reply or does not specify the reply type */
   if(accept == -1 || accept == REST.type.APPLICATION_JSON)
   {
+    size_t strpos = 0;            /* position in overall string (which is larger than the buffer) */
+    size_t bufpos = 0;            /* position within buffer (bytes written) */
+    if(new_notification || *offset == -1)
+      *offset = 0;
+    PRINTF("buffer=%s, bufpos=%d, bufsize=%d, strpos=%d, offset=%d\n", buffer, bufpos, preferred_size, strpos, *offset);
+    
     plexi_reply_char_if_possible('{', buffer, &bufpos, preferred_size, &strpos, offset);
     uip_ds6_defrt_t *default_route = uip_ds6_defrt_lookup(uip_ds6_defrt_choose());
     if(default_route)
@@ -208,7 +214,7 @@ plexi_get_dag_handler(void *request,
 
 
     plexi_reply_string_if_possible("]}", buffer, &bufpos, preferred_size, &strpos, offset);
-
+    new_notification = 0;
     if(bufpos > 0) {
       /* Build the header of the reply */
       REST.set_header_content_type(response, REST.type.APPLICATION_JSON);
@@ -218,14 +224,22 @@ plexi_get_dag_handler(void *request,
       coap_set_status_code(response, BAD_OPTION_4_02);
       coap_set_payload(response, "BlockOutOfScope", 15);
     }
-    if(strpos < *offset + preferred_size) {
+    if(strpos <= *offset + preferred_size) {
       *offset = -1;
     } else {
       *offset += preferred_size;
+/*      int i=0, temp_offset=*offset;
+      while(temp_offset>0) {
+        temp_offset -= preferred_size;
+        i++;
+      }
+      coap_set_header_block2(response, i, strpos - *offset, preferred_size);
+*/    
     }
     printf ("### offset=%d\n",*offset);
   } else { /* if the client accepts a response payload format other than json, return 406 */
     coap_set_status_code(response, NOT_ACCEPTABLE_4_06);
+    new_notification = 0;
     return;
   }
 }
@@ -233,13 +247,14 @@ plexi_get_dag_handler(void *request,
 static void
 plexi_dag_event_handler()
 {
+  new_notification = 1;
   /* Registered observers are notified and will trigger the GET handler to create the response. */
   REST.notify_subscribers(&resource_rpl_dag);
 }
 static void
 plexi_rpl_changed_handler(void *ptr)
 {
-  REST.notify_subscribers(&resource_rpl_dag);
+  plexi_dag_event_handler();
 }
 
 void
@@ -261,8 +276,11 @@ void plexi_rpl_packet_received(void){
   {
     if(uip_ipaddr_cmp(&actual_routes[i].route, &from))
     {
+//        int tmp=actual_routes[i].last_seen;
 	actual_routes[i].last_seen = clock_seconds();
-        updated = 1;
+//        updated = 1;
+//        if(tmp == -1)
+//          plexi_dag_event_handler();
         break;
     }
   }
@@ -290,11 +308,6 @@ PROCESS_THREAD(blabla, ev, data)
   etimer_set(&et, CLOCK_SECOND);
 
   uint8_t i = 0;
-  for(i = 0; i<ACTUAL_ROUTES_NUM; i++)
-  {
-    actual_routes[i].last_seen = -1;
-  }
-
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
     /* Reset the etimer to trig again in PLEXI_RPL_UPDATE_INTERVAL seconds */
@@ -305,7 +318,8 @@ PROCESS_THREAD(blabla, ev, data)
       if(actual_routes[i].last_seen < clock_seconds() - PLEXI_RPL_UPDATE_INTERVAL)
       {
         actual_routes[i].last_seen = -1;
-        plexi_dag_event_handler();
+//        plexi_dag_event_handler();
+        break;
       }
     }
   }
@@ -315,5 +329,11 @@ PROCESS_THREAD(blabla, ev, data)
 void
 plexi_rpl_init()
 {
+  uint8_t i = 0;
+  for(i = 0; i<ACTUAL_ROUTES_NUM; i++)
+  {
+    actual_routes[i].last_seen = -1;
+  }
+
   process_start(&blabla, NULL);
 }

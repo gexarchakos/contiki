@@ -48,9 +48,12 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <inttypes.h>
 #include "net/rime/rime.h"
+#include "net/mac/tsch/tsch-schedule.h"
+#include "net/packetbuf.h"
 
-#define DEBUG DEBUG_NONE
+#define DEBUG DEBUG_PRINT
 #include "net/ip/uip-debug.h"
 
 void plexi_packet_received(void);
@@ -101,6 +104,45 @@ extern resource_t resource_6top_links;
 void
 plexi_packet_received(void)
 {
+#if TSCH_LOG_CONF_LEVEL
+  linkaddr_t *sender = (linkaddr_t *)packetbuf_addr(PACKETBUF_ADDR_SENDER);
+  struct tsch_slotframe *slotframe = tsch_schedule_get_slotframe_by_handle((uint16_t)packetbuf_attr(PACKETBUF_ATTR_TSCH_SLOTFRAME));
+  uint16_t slotoffset = (uint16_t)packetbuf_attr(PACKETBUF_ATTR_TSCH_TIMESLOT);
+  uint64_t asn21 = packetbuf_attr(PACKETBUF_ATTR_TSCH_ASN_2_1);
+  uint64_t asn43 = packetbuf_attr(PACKETBUF_ATTR_TSCH_ASN_4_3);
+  uint64_t asn5 = packetbuf_attr(PACKETBUF_ATTR_TSCH_ASN_5);
+  uint64_t asn = (asn5 << 32) | (asn43 << 16) | asn21;
+
+  PRINTF("PLEXI: [%ld] ",clock_time());
+#if LINKADDR_SIZE == 2
+  PRINTF("%02x",(unsigned int)(linkaddr_node_addr.u16 & 0xFF));
+  PRINTF(':');
+  PRINTF("%02x",(unsigned int)((linkaddr_node_addr.u16>>8) & 0xFF));
+#else
+  unsigned int i;
+  for(i = 0; i < LINKADDR_SIZE; i++) {
+    if(i > 0) {
+      PRINTF(":");
+    }
+    PRINTF("%02x",(unsigned int)linkaddr_node_addr.u8[i]);
+  }
+#endif
+  PRINTF(" <- ");
+#if LINKADDR_SIZE == 2
+  PRINTF("%02x",(unsigned int)(sender->u16 & 0xFF));
+  PRINTF(":");
+  PRINTF("%02x",(unsigned int)((sender->u16>>8) & 0xFF));
+#else
+  for(i = 0; i < LINKADDR_SIZE; i++) {
+    if(i > 0) {
+      PRINTF(":");
+    }
+    PRINTF("%02x",(unsigned int)sender->u8[i]);
+  }
+#endif
+  PRINTF(", asn=%ld, slotframe=%d, slotoffset=%d\n", asn, slotframe->handle, slotoffset);
+#endif
+
 #if PLEXI_WITH_RPL_DAG_RESOURCE
   plexi_rpl_packet_received();
 #endif
@@ -109,6 +151,44 @@ plexi_packet_received(void)
 void
 plexi_packet_sent(int mac_status)
 {
+#if TSCH_LOG_CONF_LEVEL
+  if(mac_status == MAC_TX_OK && packetbuf_attr(PACKETBUF_ATTR_MAC_ACK)) {
+    linkaddr_t *receiver = (linkaddr_t *)packetbuf_addr(PACKETBUF_ADDR_RECEIVER);
+    struct tsch_slotframe *slotframe = (struct tsch_slotframe *)tsch_schedule_get_slotframe_by_handle((uint16_t)packetbuf_attr(PACKETBUF_ATTR_TSCH_SLOTFRAME));
+    uint16_t slotoffset = (uint16_t)packetbuf_attr(PACKETBUF_ATTR_TSCH_TIMESLOT);
+    struct tsch_link *link = (struct tsch_link *)tsch_schedule_get_link_by_timeslot(slotframe, slotoffset);
+
+    PRINTF("PLEXI: [%ld] ",clock_time());
+
+#if LINKADDR_SIZE == 2
+    PRINTF("%02x",(unsigned int)(linkaddr_node_addr.u16 & 0xFF));
+    PRINTF(":");
+    PRINTF("%02x",(unsigned int)((linkaddr_node_addr.u16>>8) & 0xFF));
+#else
+    unsigned int i;
+    for(i = 0; i < LINKADDR_SIZE; i++) {
+      if(i > 0) {
+        PRINTF(":");
+      }
+      PRINTF("%02x",(unsigned int)linkaddr_node_addr.u8[i]);
+    }
+#endif
+    PRINTF(" -> ");
+#if LINKADDR_SIZE == 2
+    PRINTF("%02x",(unsigned int)(receiver->u16 & 0xFF));
+    PRINTF(":");
+    PRINTF("%02x",(unsigned int)((receiver->u16>>8) & 0xFF));
+#else
+    for(i = 0; i < LINKADDR_SIZE; i++) {
+      if(i > 0) {
+        PRINTF(":");
+      }
+      PRINTF("%02x",(unsigned int)receiver->u8[i]);
+    }
+#endif
+    PRINTF(", timeslot=%d, slotframe=%d, channeloffset=%d\n", link->timeslot, link->slotframe_handle, link->channel_offset);
+  }
+#endif
 }
 
 void

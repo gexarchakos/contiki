@@ -587,7 +587,7 @@ PT_THREAD(tsch_tx_slot(struct pt *pt, struct rtimer *t))
     current_packet->transmissions++;
     current_packet->ret = mac_tx_status;
 
-#if TSCH_WITH_LINK_STATISTICS
+#if TSCH_WITH_LINK_STATISTICS || TSCH_LOG_LEVEL
     current_packet->timeslot = current_link->timeslot;
     current_packet->slotframe_handle = current_link->slotframe_handle;
 #endif
@@ -713,7 +713,7 @@ PT_THREAD(tsch_rx_slot(struct pt *pt, struct rtimer *t))
 
         packet_duration = TSCH_PACKET_DURATION(current_input->len);
 
-#if TSCH_WITH_LINK_STATISTICS
+#if TSCH_WITH_LINK_STATISTICS || TSCH_LOG_CONF_LEVEL
         radio_value_t radio_last_lqi;
         NETSTACK_RADIO.get_value(RADIO_PARAM_LAST_LINK_QUALITY, &radio_last_lqi);
         current_input->lqi = (signed)radio_last_lqi;

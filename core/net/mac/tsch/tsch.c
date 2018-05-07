@@ -362,7 +362,7 @@ tsch_rx_process_pending()
       packetbuf_copyfrom(current_input->payload, current_input->len);
       packetbuf_set_attr(PACKETBUF_ATTR_RSSI, current_input->rssi);
 
-#if TSCH_WITH_LINK_STATISTICS
+#if TSCH_WITH_LINK_STATISTICS || TSCH_LOG_LEVEL
       packetbuf_set_attr(PACKETBUF_ATTR_LINK_QUALITY, current_input->lqi);
       packetbuf_set_attr(PACKETBUF_ATTR_TSCH_SLOTFRAME, current_input->slotframe_id);
       packetbuf_set_attr(PACKETBUF_ATTR_TSCH_TIMESLOT, current_input->slotoffset);
@@ -398,7 +398,7 @@ tsch_tx_process_pending()
     /* Put packet into packetbuf for packet_sent callback */
     queuebuf_to_packetbuf(p->qb);
 
-#if TSCH_WITH_LINK_STATISTICS
+#if TSCH_WITH_LINK_STATISTICS || TSCH_LOG_LEVEL
     packetbuf_set_attr(PACKETBUF_ATTR_TSCH_SLOTFRAME, p->slotframe_handle);
     packetbuf_set_attr(PACKETBUF_ATTR_TSCH_TIMESLOT, p->timeslot);
     //packetbuf_set_attr(PACKETBUF_ATTR_TSCH_CHANNELOFFSET, p->channel_offset);

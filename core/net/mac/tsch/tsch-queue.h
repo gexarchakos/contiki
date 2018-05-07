@@ -126,7 +126,7 @@ struct tsch_packet {
   mac_callback_t sent; /* callback for this packet */
   void *ptr; /* MAC callback parameter */
 
-#if TSCH_WITH_LINK_STATISTICS
+#if TSCH_WITH_LINK_STATISTICS || TSCH_LOG_CONF_LEVEL
   uint16_t timeslot; /* timeslot the packet was sent or received on*/
   uint16_t slotframe_handle;
 #endif /* TSCH_WITH_LINK_STATISTICS */
